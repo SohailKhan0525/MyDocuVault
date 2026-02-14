@@ -55,17 +55,31 @@ class UpdateChecker @Inject constructor(
         }
     }
 
-    suspend fun downloadApk(context: Context, apkUrl: String): File = withContext(Dispatchers.IO) {
+    suspend fun downloadApk(
+        context: Context,
+        apkUrl: String,
+        onProgress: (Int) -> Unit
+    ): File = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(apkUrl).build()
         val file = File(context.getExternalFilesDir(null), "mydocvault_update.apk")
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("Download failed")
-            val sink = FileOutputStream(file)
-            response.body?.byteStream()?.use { input ->
-                input.copyTo(sink)
+            val body = response.body ?: error("Empty response")
+            val total = body.contentLength().coerceAtLeast(1)
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var downloaded = 0L
+            FileOutputStream(file).use { sink ->
+                body.byteStream().use { input ->
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read <= 0) break
+                        sink.write(buffer, 0, read)
+                        downloaded += read
+                        val percent = ((downloaded * 100) / total).toInt().coerceIn(0, 100)
+                        onProgress(percent)
+                    }
+                }
             }
-            sink.flush()
-            sink.close()
         }
         file
     }

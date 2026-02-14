@@ -17,6 +17,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -45,6 +46,7 @@ fun SettingsScreen(
     val biometricEnabled by viewModel.biometricEnabled.collectAsState()
     val updateInfo by viewModel.updateInfo.collectAsState()
     val isChecking by viewModel.isChecking.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
     val error by viewModel.error.collectAsState()
     var showUpdateDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -109,20 +111,29 @@ fun SettingsScreen(
 
     if (showUpdateDialog && updateInfo != null) {
         val info = updateInfo!!
+        val isDownloading = downloadProgress != null
         AlertDialog(
             onDismissRequest = { showUpdateDialog = false },
             title = { Text("Update available ${info.versionName}") },
-            text = { Text(info.notes.ifBlank { "A new version is available." }) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(info.notes.ifBlank { "A new version is available." })
+                    if (isDownloading) {
+                        LinearProgressIndicator(progress = { (downloadProgress ?: 0) / 100f })
+                        Text("Downloading... ${downloadProgress}%")
+                    }
+                }
+            },
             confirmButton = {
                 Button(onClick = {
                     showUpdateDialog = false
                     viewModel.downloadAndInstall(context, info.apkUrl)
-                }) {
+                }, enabled = !isDownloading) {
                     Text("Download")
                 }
             },
             dismissButton = {
-                Button(onClick = { showUpdateDialog = false }) { Text("Later") }
+                Button(onClick = { showUpdateDialog = false }, enabled = !isDownloading) { Text("Later") }
             }
         )
     }

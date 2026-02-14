@@ -34,6 +34,9 @@ class SettingsViewModel @Inject constructor(
     private val _isChecking = MutableStateFlow(false)
     val isChecking: StateFlow<Boolean> = _isChecking
 
+    private val _downloadProgress = MutableStateFlow<Int?>(null)
+    val downloadProgress: StateFlow<Int?> = _downloadProgress
+
     fun setBiometricEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.setBiometricEnabled(enabled)
@@ -54,10 +57,15 @@ class SettingsViewModel @Inject constructor(
     fun downloadAndInstall(context: Context, apkUrl: String) {
         viewModelScope.launch {
             try {
-                val file = updateChecker.downloadApk(context, apkUrl)
+                _downloadProgress.value = 0
+                val file = updateChecker.downloadApk(context, apkUrl) { percent ->
+                    _downloadProgress.value = percent
+                }
                 updateChecker.startInstall(context, file)
             } catch (_: Exception) {
                 _error.value = "Download failed. Please try again."
+            } finally {
+                _downloadProgress.value = null
             }
         }
     }

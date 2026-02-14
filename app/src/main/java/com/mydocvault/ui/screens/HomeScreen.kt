@@ -78,9 +78,9 @@ fun HomeScreen(
     )
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri: Uri? ->
-            if (uri != null) {
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20),
+        onResult = { uris ->
+            uris.forEach { uri ->
                 val name = getDocumentDisplayName(context, uri)
                 val type = FileType.fromFileName(name).let { if (it == FileType.OTHER) FileType.IMAGE else it }.raw
                 viewModel.importDocument(uri, name, type)
