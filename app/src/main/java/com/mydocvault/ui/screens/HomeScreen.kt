@@ -2,6 +2,7 @@ package com.mydocvault.ui.screens
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.combinedClickable
@@ -65,12 +66,23 @@ fun HomeScreen(
     var deleteTarget by remember { mutableStateOf<Long?>(null) }
 
     val sheetState = rememberModalBottomSheetState()
-    val launcher = rememberLauncherForActivityResult(
+    val docLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri: Uri? ->
             if (uri != null) {
                 val name = getDocumentDisplayName(context, uri)
                 val type = FileType.fromFileName(name).raw
+                viewModel.importDocument(uri, name, type)
+            }
+        }
+    )
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri: Uri? ->
+            if (uri != null) {
+                val name = getDocumentDisplayName(context, uri)
+                val type = FileType.fromFileName(name).let { if (it == FileType.OTHER) FileType.IMAGE else it }.raw
                 viewModel.importDocument(uri, name, type)
             }
         }
@@ -155,12 +167,25 @@ fun HomeScreen(
                     )
                 )
                 ListItem(
-                    headlineContent = { Text("Import document") },
-                    supportingContent = { Text("Images, PDF, DOCX") },
+                    headlineContent = { Text("Import from gallery") },
+                    supportingContent = { Text("Images only") },
                     modifier = Modifier.combinedClickable(
                         onClick = {
                             showSheet = false
-                            launcher.launch(arrayOf("image/*", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        onLongClick = {}
+                    )
+                )
+                ListItem(
+                    headlineContent = { Text("Import document") },
+                    supportingContent = { Text("PDF, DOCX") },
+                    modifier = Modifier.combinedClickable(
+                        onClick = {
+                            showSheet = false
+                            docLauncher.launch(arrayOf("application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
                         },
                         onLongClick = {}
                     )
