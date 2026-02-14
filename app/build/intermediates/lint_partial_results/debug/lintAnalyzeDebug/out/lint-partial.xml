@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.5.2" type="partial_results">
+    <map id="UnsafeIntentLaunch">
+            <map id="unprotected">
+                <entry
+                    name="com.mydocvault.MainActivity"
+                    boolean="true"/>
+            </map>
+    </map>
+    <map id="UnsafeImplicitIntentLaunch">
+            <map id="actionsSent">
+                    <map id="android.intent.action.VIEW (used to start an activity)">
+                        <location id="0"
+                            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/mydocvault/utils/UpdateChecker.kt"
+                            line="75"
+                            column="22"
+                            startOffset="2802"
+                            endLine="75"
+                            endColumn="48"
+                            endOffset="2828"/>
+                    </map>
+            </map>
+    </map>
+    <map id="UnusedResources">
+        <entry
+            name="model"
+            string="string[app_name(U)],style[Theme_MyDocVault(U),Theme_Material3_DayNight_NoActionBar(R)],xml[file_paths(U)];1^2;;;"/>
+    </map>
+
+</incidents>
