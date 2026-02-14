@@ -13,11 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +31,7 @@ import androidx.navigation.NavController
 import com.mydocvault.ui.navigation.NavRoutes
 import com.mydocvault.utils.BiometricAuth
 import com.mydocvault.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun PinScreen(
@@ -39,7 +40,9 @@ fun PinScreen(
 ) {
     val mode = navController.currentBackStackEntry?.arguments?.getString("mode") ?: "unlock"
     val biometricEnabled by viewModel.biometricEnabled.collectAsState()
+    val savedPin by viewModel.pinState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
@@ -79,12 +82,15 @@ fun PinScreen(
                 return@Button
             }
             if (mode == "create") {
-                viewModel.setPin(pin)
-                navController.navigate(NavRoutes.Home) {
-                    popUpTo(NavRoutes.Pin) { inclusive = true }
+                scope.launch {
+                    viewModel.setPin(pin)
+                    navController.navigate(NavRoutes.Home) {
+                        popUpTo(NavRoutes.Pin) { inclusive = true }
+                    }
                 }
             } else {
-                if (viewModel.verifyPin(pin)) {
+                val current = savedPin
+                if (!current.isNullOrBlank() && pin == current) {
                     navController.navigate(NavRoutes.Home) {
                         popUpTo(NavRoutes.Pin) { inclusive = true }
                     }
@@ -92,7 +98,7 @@ fun PinScreen(
                     error = "Incorrect PIN"
                 }
             }
-        }) {
+        }, enabled = mode == "create" || !savedPin.isNullOrBlank()) {
             Text(text = if (mode == "create") "Set PIN" else "Unlock")
         }
 

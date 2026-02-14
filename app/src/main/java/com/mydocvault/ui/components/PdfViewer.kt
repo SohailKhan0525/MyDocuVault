@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,9 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @Composable
@@ -44,17 +46,16 @@ fun PdfViewer(filePath: String) {
         }
     }
 
-    fun renderPage(index: Int) {
-        val pdf = renderer ?: return
-        val page = pdf.openPage(index)
-        val bmp = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-        page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-        page.close()
+    LaunchedEffect(renderer, pageIndex) {
+        val pdf = renderer ?: return@LaunchedEffect
+        val bmp = withContext(Dispatchers.IO) {
+            val page = pdf.openPage(pageIndex)
+            val image = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+            page.render(image, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            page.close()
+            image
+        }
         bitmap = bmp
-    }
-
-    if (bitmap == null && renderer != null) {
-        renderPage(pageIndex)
     }
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -71,14 +72,12 @@ fun PdfViewer(filePath: String) {
             ) {
                 Button(onClick = {
                     pageIndex = (pageIndex - 1).coerceAtLeast(0)
-                    renderPage(pageIndex)
                 }, enabled = pageIndex > 0) {
                     Text("Prev")
                 }
                 Text("${pageIndex + 1} / $pageCount")
                 Button(onClick = {
                     pageIndex = (pageIndex + 1).coerceAtMost(pageCount - 1)
-                    renderPage(pageIndex)
                 }, enabled = pageIndex < pageCount - 1) {
                     Text("Next")
                 }

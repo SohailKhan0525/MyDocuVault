@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +45,7 @@ fun SettingsScreen(
     val biometricEnabled by viewModel.biometricEnabled.collectAsState()
     val updateInfo by viewModel.updateInfo.collectAsState()
     val isChecking by viewModel.isChecking.collectAsState()
+    val error by viewModel.error.collectAsState()
     var showUpdateDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -68,26 +72,36 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column {
-                Text("Security")
-                Spacer(modifier = Modifier.height(8.dp))
-                RowSetting(
-                    title = "Enable biometric",
-                    trailing = {
-                        Switch(checked = biometricEnabled, onCheckedChange = { viewModel.setBiometricEnabled(it) })
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Security", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    RowSetting(
+                        title = "Enable biometric",
+                        trailing = {
+                            Switch(checked = biometricEnabled, onCheckedChange = { viewModel.setBiometricEnabled(it) })
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { navController.navigate("${NavRoutes.Pin}?mode=create") }) {
+                        Text("Change PIN")
                     }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { navController.navigate("${NavRoutes.Pin}?mode=create") }) {
-                    Text("Change PIN")
                 }
             }
 
-            Column {
-                Text("Updates")
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { viewModel.checkForUpdate(context, "SohailKhan0525", "MyDocuVault") }, enabled = !isChecking) {
-                    Text(if (isChecking) "Checking..." else "Check for updates")
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Updates", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { viewModel.checkForUpdate(context, "SohailKhan0525", "MyDocuVault") }, enabled = !isChecking) {
+                        Text(if (isChecking) "Checking..." else "Check for updates")
+                    }
                 }
             }
         }
@@ -109,6 +123,17 @@ fun SettingsScreen(
             },
             dismissButton = {
                 Button(onClick = { showUpdateDialog = false }) { Text("Later") }
+            }
+        )
+    }
+
+    if (error != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearError() },
+            title = { Text("Update") },
+            text = { Text(error ?: "") },
+            confirmButton = {
+                Button(onClick = { viewModel.clearError() }) { Text("OK") }
             }
         )
     }

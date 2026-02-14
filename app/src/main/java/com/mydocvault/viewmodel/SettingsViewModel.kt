@@ -28,6 +28,9 @@ class SettingsViewModel @Inject constructor(
     private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
     val updateInfo: StateFlow<UpdateInfo?> = _updateInfo
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
     private val _isChecking = MutableStateFlow(false)
     val isChecking: StateFlow<Boolean> = _isChecking
 
@@ -41,14 +44,25 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _isChecking.value = true
             _updateInfo.value = updateChecker.checkForUpdate(context, owner, repo)
+            if (_updateInfo.value == null) {
+                _error.value = "No updates found or network unavailable."
+            }
             _isChecking.value = false
         }
     }
 
     fun downloadAndInstall(context: Context, apkUrl: String) {
         viewModelScope.launch {
-            val file = updateChecker.downloadApk(context, apkUrl)
-            updateChecker.startInstall(context, file)
+            try {
+                val file = updateChecker.downloadApk(context, apkUrl)
+                updateChecker.startInstall(context, file)
+            } catch (_: Exception) {
+                _error.value = "Download failed. Please try again."
+            }
         }
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 }

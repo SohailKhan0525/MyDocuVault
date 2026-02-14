@@ -26,10 +26,8 @@ class AuthViewModel @Inject constructor(
         false
     )
 
-    fun setPin(pin: String) {
-        viewModelScope.launch {
-            prefs.setPin(pin)
-        }
+    suspend fun setPin(pin: String) {
+        prefs.setPin(pin)
     }
 
     fun clearPin() {

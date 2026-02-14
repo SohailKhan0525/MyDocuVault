@@ -23,31 +23,35 @@ class UpdateChecker @Inject constructor(
     private val client: OkHttpClient
 ) {
     suspend fun checkForUpdate(context: Context, owner: String, repo: String): UpdateInfo? = withContext(Dispatchers.IO) {
-        val currentVersion = getAppVersionName(context)
-        val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
-        val request = Request.Builder().url(url).build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return@withContext null
-            val body = response.body?.string() ?: return@withContext null
-            val json = JSONObject(body)
-            val tagName = json.optString("tag_name")
-            val notes = json.optString("body")
-            val assets = json.optJSONArray("assets")
-            var apkUrl = ""
-            if (assets != null) {
-                for (i in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(i)
-                    val name = asset.optString("name")
-                    val urlStr = asset.optString("browser_download_url")
-                    if (name.endsWith(".apk")) {
-                        apkUrl = urlStr
-                        break
+        try {
+            val currentVersion = getAppVersionName(context)
+            val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
+            val request = Request.Builder().url(url).build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
+                val json = JSONObject(body)
+                val tagName = json.optString("tag_name")
+                val notes = json.optString("body")
+                val assets = json.optJSONArray("assets")
+                var apkUrl = ""
+                if (assets != null) {
+                    for (i in 0 until assets.length()) {
+                        val asset = assets.getJSONObject(i)
+                        val name = asset.optString("name")
+                        val urlStr = asset.optString("browser_download_url")
+                        if (name.endsWith(".apk")) {
+                            apkUrl = urlStr
+                            break
+                        }
                     }
                 }
+                if (apkUrl.isBlank()) return@withContext null
+                if (!VersionComparator.isNewerVersion(tagName, currentVersion)) return@withContext null
+                UpdateInfo(tagName, notes, apkUrl)
             }
-            if (apkUrl.isBlank()) return@withContext null
-            if (!VersionComparator.isNewerVersion(tagName, currentVersion)) return@withContext null
-            UpdateInfo(tagName, notes, apkUrl)
+        } catch (_: Exception) {
+            null
         }
     }
 

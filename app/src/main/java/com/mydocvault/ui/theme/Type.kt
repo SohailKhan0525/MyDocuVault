@@ -12,9 +12,19 @@ val VaultTypography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp
     ),
+    titleMedium = TextStyle(
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp
+    ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp
+    ),
+    bodyMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 14.sp
     )
 )
