@@ -127,7 +127,8 @@ fun SettingsScreen(
                     icon = Icons.Default.SystemUpdate,
                     title = if (isChecking) "Checking for updates…" else "Check for updates",
                     subtitle = "See if a new version is available",
-                    enabled = !isChecking
+                    enabled = !isChecking,
+                    actionLabel = if (isChecking) "Wait" else "Check"
                 ) {
                     viewModel.checkForUpdate(context, "SohailKhan0525", "MyDocuVault")
                 }
@@ -286,6 +287,7 @@ private fun SettingsButtonRow(
     title: String,
     subtitle: String,
     enabled: Boolean = true,
+    actionLabel: String = "Open",
     onClick: () -> Unit
 ) {
     Row(
@@ -334,7 +336,7 @@ private fun SettingsButtonRow(
             modifier = Modifier.height(36.dp)
         ) {
             Text(
-                text = if (title.contains("Checking")) "Wait" else "Open",
+                text = actionLabel,
                 style = MaterialTheme.typography.labelMedium
             )
         }
