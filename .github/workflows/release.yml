@@ -1,0 +1,101 @@
+name: Build and Release APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Read version from build.gradle.kts
+        id: version
+        run: |
+          VERSION_NAME=$(grep 'versionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+          VERSION_CODE=$(grep 'versionCode' app/build.gradle.kts | sed 's/[^0-9]//g')
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION_NAME ($VERSION_CODE)"
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Sign APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          BUILD_TOOLS=$(ls $ANDROID_SDK_ROOT/build-tools/ | sort -V | tail -1)
+          APK_PATH=$(find app/build/outputs/apk/release -name "*-unsigned.apk" -o -name "*.apk" | head -1)
+          echo "APK found at: $APK_PATH"
+          echo "Using build-tools: $BUILD_TOOLS"
+          SIGNED_APK="app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk"
+          if [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
+            $ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner sign \
+              --ks release.keystore \
+              --ks-key-alias "$KEY_ALIAS" \
+              --ks-pass "pass:$KEYSTORE_PASSWORD" \
+              --key-pass "pass:$KEY_PASSWORD" \
+              --out "$SIGNED_APK" \
+              "$APK_PATH"
+          else
+            keytool -genkey -v -keystore debug.keystore -alias mydocvault \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=MyDocuVault, OU=Dev, O=MyDocuVault, L=City, ST=State, C=US"
+            $ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner sign \
+              --ks debug.keystore \
+              --ks-key-alias mydocvault \
+              --ks-pass pass:android \
+              --key-pass pass:android \
+              --out "$SIGNED_APK" \
+              "$APK_PATH"
+          fi
+          echo "Signed APK: $SIGNED_APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyDocuVault-v${{ steps.version.outputs.version_name }}
+          path: app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version_name }}
+          name: MyDocuVault v${{ steps.version.outputs.version_name }}
+          body: |
+            ## MyDocuVault v${{ steps.version.outputs.version_name }}
+
+            ### What's New
+            - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
+            - Bug fixes and performance improvements
+
+            ### Installation
+            Download and install the APK on your Android device (API 26+).
+          draft: false
+          prerelease: false
+          files: app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
