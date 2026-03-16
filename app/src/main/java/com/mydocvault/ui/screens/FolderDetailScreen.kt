@@ -55,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -367,7 +368,7 @@ fun FolderDetailScreen(
 @Composable
 private fun SectionLabel(
     text: String,
-    topPadding: androidx.compose.ui.unit.Dp = 0.dp
+    topPadding: Dp = 0.dp
 ) {
     Text(
         text = text,
@@ -383,8 +384,8 @@ private fun ItemCard(
     name: String,
     subtitle: String?,
     icon: ImageVector,
-    iconContainerColor: androidx.compose.ui.graphics.Color,
-    iconTint: androidx.compose.ui.graphics.Color,
+    iconContainerColor: Color,
+    iconTint: Color,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
