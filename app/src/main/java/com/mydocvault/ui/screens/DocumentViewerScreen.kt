@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -37,6 +38,7 @@ import com.mydocvault.ui.components.PdfViewer
 import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.utils.DocxTextExtractor
 import com.mydocvault.utils.FileType
+import com.mydocvault.utils.shareDocument
 import com.mydocvault.viewmodel.DocumentViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,6 +52,7 @@ fun DocumentViewerScreen(
 ) {
     val document by viewModel.document.collectAsState()
     val folders by viewModel.folders.collectAsState()
+    val context = LocalContext.current
 
     var showSheet by remember { mutableStateOf(false) }
     var docxText by remember { mutableStateOf("") }
@@ -123,6 +126,16 @@ fun DocumentViewerScreen(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState
         ) {
+            ListItem(
+                headlineContent = { Text("Share") },
+                supportingContent = { Text("Send via WhatsApp, email, or other apps") },
+                modifier = Modifier
+                    .clickable {
+                        showSheet = false
+                        shareDocument(context, doc.filePath, FileType.fromRaw(doc.fileType))
+                    }
+                    .padding(horizontal = 8.dp)
+            )
             ListItem(
                 headlineContent = { Text("Replace document") },
                 supportingContent = { Text("Pick a new file") },
