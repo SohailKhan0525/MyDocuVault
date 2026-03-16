@@ -40,7 +40,7 @@ class UpdateChecker @Inject constructor(
                         val asset = assets.getJSONObject(i)
                         val name = asset.optString("name")
                         val urlStr = asset.optString("browser_download_url")
-                        if (name.endsWith(".apk")) {
+                        if (name.endsWith(".apk") && !name.endsWith("-debug.apk")) {
                             apkUrl = urlStr
                             break
                         }

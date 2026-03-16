@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build Release APK
+    name: Build Debug and Release APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,10 +36,23 @@ jobs:
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "Version: $VERSION_NAME ($VERSION_CODE)"
 
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename Debug APK
+        run: |
+          DEBUG_APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          if [ -z "$DEBUG_APK" ]; then
+            echo "Error: No debug APK found in app/build/outputs/apk/debug"
+            exit 1
+          fi
+          echo "Debug APK found at: $DEBUG_APK"
+          cp "$DEBUG_APK" "app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk"
+
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Sign APK
+      - name: Sign Release APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -74,10 +87,16 @@ jobs:
           fi
           echo "Signed APK: $SIGNED_APK"
 
-      - name: Upload APK artifact
+      - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MyDocuVault-v${{ steps.version.outputs.version_name }}
+          name: MyDocuVault-v${{ steps.version.outputs.version_name }}-debug
+          path: app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
+
+      - name: Upload Release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyDocuVault-v${{ steps.version.outputs.version_name }}-release
           path: app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
 
       - name: Create GitHub Release
@@ -92,10 +111,18 @@ jobs:
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
             - Bug fixes and performance improvements
 
+            ### Downloads
+            | APK | Description |
+            |-----|-------------|
+            | `MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk` | Debug build for testing |
+            | `MyDocuVault-v${{ steps.version.outputs.version_name }}.apk` | Release build |
+
             ### Installation
             Download and install the APK on your Android device (API 26+).
           draft: false
           prerelease: false
-          files: app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
+          files: |
+            app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
+            app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
