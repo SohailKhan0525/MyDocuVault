@@ -1,6 +1,9 @@
 package com.mydocvault.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,13 +25,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -69,47 +75,85 @@ fun PinScreen(
     val isCreate = mode == "create"
     val canUnlock = !savedPin.isNullOrBlank()
     val header = if (isCreate) "Create PIN" else "Welcome back"
-    val subheader = if (isCreate) "Set a 4-digit lock" else if (!canUnlock) "Loading PIN..." else "Enter your PIN"
+    val subheader = if (isCreate) "Set a 4-digit PIN to protect your vault" else if (!canUnlock) "Loading…" else "Enter your PIN to unlock"
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        MaterialTheme.colorScheme.background
+                    colorStops = arrayOf(
+                        0f to MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                        1f to MaterialTheme.colorScheme.background
                     )
                 )
             )
-            .padding(24.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Header section
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(top = 64.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    tonalElevation = 4.dp,
+                    modifier = Modifier.size(72.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
-                Text(text = header, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = header,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = subheader, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = subheader,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(32.dp))
                 PinDots(count = 4, filled = pin.length)
-                Spacer(modifier = Modifier.height(16.dp))
-                AnimatedVisibility(visible = error.isNotBlank()) {
-                    Text(text = error, color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(12.dp))
+                if (error.isNotBlank()) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            Card(
-                shape = RoundedCornerShape(24.dp),
+            // Keypad section
+            Surface(
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 24.dp, vertical = 28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     LazyVerticalGrid(
@@ -124,16 +168,23 @@ fun PinScreen(
                             when (key) {
                                 "" -> Spacer(modifier = Modifier.aspectRatio(1f))
                                 "back" -> {
-                                    FilledTonalButton(
+                                    FilledTonalIconButton(
                                         onClick = {
                                             if (pin.isNotEmpty()) pin = pin.dropLast(1)
                                             error = ""
                                         },
                                         modifier = Modifier
                                             .aspectRatio(1f)
-                                            .fillMaxWidth()
+                                            .fillMaxWidth(),
+                                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
                                     ) {
-                                        Icon(imageVector = Icons.AutoMirrored.Filled.Backspace, contentDescription = "Backspace")
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.Backspace,
+                                            contentDescription = "Backspace",
+                                            modifier = Modifier.size(22.dp)
+                                        )
                                     }
                                 }
                                 else -> {
@@ -146,16 +197,24 @@ fun PinScreen(
                                         },
                                         modifier = Modifier
                                             .aspectRatio(1f)
-                                            .fillMaxWidth()
+                                            .fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
                                     ) {
-                                        Text(text = key, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            text = key,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
                                     }
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = {
                             if (pin.length != 4) {
@@ -177,18 +236,27 @@ fun PinScreen(
                                     }
                                 } else {
                                     error = "Incorrect PIN"
+                                    pin = ""
                                 }
                             }
                         },
                         enabled = isCreate || canUnlock,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
                     ) {
-                        Text(text = if (isCreate) "Set PIN" else "Unlock")
+                        Text(
+                            text = if (isCreate) "Set PIN" else "Unlock",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
 
                     if (!isCreate && biometricEnabled && context is FragmentActivity) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         OutlinedButton(
                             onClick = {
                                 val biometric = BiometricAuth(context)
@@ -207,11 +275,21 @@ fun PinScreen(
                                     error = "Biometric not available"
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Fingerprint, contentDescription = null)
+                            Icon(
+                                imageVector = Icons.Default.Fingerprint,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
                             Spacer(modifier = Modifier.size(8.dp))
-                            Text("Use biometric")
+                            Text(
+                                text = "Use biometric",
+                                style = MaterialTheme.typography.labelLarge
+                            )
                         }
                     }
                 }
@@ -222,15 +300,23 @@ fun PinScreen(
 
 @Composable
 private fun PinDots(count: Int, filled: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         repeat(count) { index ->
+            val isFilled = index < filled
+            val dotSize by animateDpAsState(
+                targetValue = if (isFilled) 16.dp else 12.dp,
+                animationSpec = spring(stiffness = Spring.StiffnessHigh),
+                label = "dot_size_$index"
+            )
+            val dotColor by animateColorAsState(
+                targetValue = if (isFilled) MaterialTheme.colorScheme.primary
+                              else MaterialTheme.colorScheme.outline,
+                label = "dot_color_$index"
+            )
             Box(
                 modifier = Modifier
-                    .size(if (index < filled) 14.dp else 12.dp)
-                    .background(
-                        color = if (index < filled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                        shape = CircleShape
-                    )
+                    .size(dotSize)
+                    .background(color = dotColor, shape = CircleShape)
             )
         }
     }
