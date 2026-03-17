@@ -98,9 +98,9 @@ class SettingsViewModel @Inject constructor(
             _isBackingUp.value = true
             val file = backupManager.createBackup()
             _backupMessage.value = if (file != null) {
-                "Backup saved to Documents/MyDocuVaultBackup/${file.name}"
+                "Backup saved.\nLocation: ${file.absolutePath}"
             } else {
-                "Backup failed. Check storage permissions."
+                "Backup failed. Please try again."
             }
             _isBackingUp.value = false
         }

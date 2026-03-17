@@ -1,8 +1,5 @@
 package com.mydocvault.ui.screens
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -62,7 +59,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mydocvault.ui.navigation.NavRoutes
@@ -91,9 +87,12 @@ fun SettingsScreen(
     LaunchedEffect(restartApp) {
         if (restartApp) {
             val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-            kotlin.system.exitProcess(0)
+            if (intent != null) {
+                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+            // Kill the current process so the app restarts fresh with the restored data
+            android.os.Process.killProcess(android.os.Process.myPid())
         }
     }
 
@@ -120,26 +119,6 @@ fun SettingsScreen(
             } else {
                 viewModel.setBackupMessage("Could not read the selected file. Please try again.")
             }
-        }
-    }
-
-    // Storage-permission launcher for Android ≤ 9
-    val storagePermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) viewModel.createBackup()
-    }
-
-    fun onBackupClick() {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            val perm = Manifest.permission.WRITE_EXTERNAL_STORAGE
-            if (ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED) {
-                viewModel.createBackup()
-            } else {
-                storagePermissionLauncher.launch(perm)
-            }
-        } else {
-            viewModel.createBackup()
         }
     }
 
@@ -303,13 +282,13 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.titleSmall
                         )
                         Text(
-                            text = "Save to Documents/MyDocuVaultBackup",
+                            text = "Save to app storage/MyDocuVaultBackup (accessible via file manager)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Button(
-                        onClick = { onBackupClick() },
+                        onClick = { viewModel.createBackup() },
                         enabled = !isBackingUp && !isRestoring,
                         shape = RoundedCornerShape(12.dp)
                     ) {
