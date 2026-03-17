@@ -50,6 +50,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,8 +83,19 @@ fun SettingsScreen(
     val isBackingUp by viewModel.isBackingUp.collectAsState()
     val isRestoring by viewModel.isRestoring.collectAsState()
     val backupMessage by viewModel.backupMessage.collectAsState()
+    val restartApp by viewModel.restartApp.collectAsState()
     var showUpdateDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // Restart the app automatically after a successful restore
+    LaunchedEffect(restartApp) {
+        if (restartApp) {
+            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            kotlin.system.exitProcess(0)
+        }
+    }
 
     if (updateInfo != null && !showUpdateDialog) {
         showUpdateDialog = true
