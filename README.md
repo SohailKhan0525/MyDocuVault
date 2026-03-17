@@ -14,7 +14,7 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - Everything is stored in the app's **private internal storage** — other apps cannot access your files.
 - A built-in **backup system** zips your documents and database into a single file saved to `Documents/MyDocuVaultBackup/` on your device — and can restore everything from that same file.
 - **Auto-backup** runs silently every 8 hours in the background using WorkManager so your data is always protected.
-- A built-in **update checker** notifies you when a new version is available and guides you through installing it.
+- A built-in **update checker** queries GitHub Releases for new versions, shows a system notification when an update is available, and lets you download and install it directly inside the app.
 
 ---
 
@@ -35,7 +35,7 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 
 ### Document Viewing
 - 🖼️ **Image viewer** — pinch-to-zoom with Coil-powered rendering
-- 📄 **PDF viewer** — page-by-page navigation using Android's built-in `PdfRenderer`
+- 📄 **PDF viewer** — page-by-page navigation with full-width rendering, loading indicator, and graceful error handling using Android's built-in `PdfRenderer`
 - 📝 **DOCX preview** — plain-text extraction and display of Word documents
 
 ### Backup & Restore
@@ -46,8 +46,9 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - 🔔 **Notifications** — silent notification confirms when auto-backup completes
 
 ### App Updates
-- 🔔 **Update checker** — queries GitHub Releases API for new versions
-- ⬇️ **In-app download & install** — downloads the APK with progress feedback and launches the installer
+- 🔔 **Auto-check on launch** — queries GitHub Releases API when the app starts; shows a system notification if a newer version is available
+- 🔔 **Manual check** — tap *Check* in Settings → Updates to check on demand
+- ⬇️ **In-app download & install** — downloads the APK with a progress bar and launches the system installer
 
 ---
 
@@ -98,7 +99,9 @@ app/src/main/java/com/mydocvault/
 ├── viewmodel/      # AuthViewModel, HomeViewModel, FolderViewModel,
 │                   #   DocumentViewModel, SettingsViewModel
 ├── workers/        # BackupWorker (WorkManager)
-└── utils/          # File helpers, BackupManager, DocxTextExtractor, FileType enum
+└── utils/          # File helpers, BackupManager, UpdateChecker,
+                    #   UpdateNotificationHelper, BackupNotificationHelper,
+                    #   DocxTextExtractor, FileType enum
 ```
 
 ### Navigation flow
@@ -152,6 +155,8 @@ sdk.dir=/workspaces/MyDocuVault/android-sdk
 |---|---|
 | Debug | `app/build/outputs/apk/debug/app-debug.apk` |
 
+The GitHub Actions release workflow automatically builds and attaches the APK to each GitHub Release when changes are pushed to `main`.
+
 ---
 
 ## Architecture Overview
@@ -164,12 +169,15 @@ Compose UI  ◄──StateFlow──  ViewModel  ◄──Flow──  Repository
                            (Hilt DI)             Room DB + FileManager
 
 WorkManager ──► BackupWorker ──► BackupManager ──► ZIP (documents + DB)
+
+MyDocVaultApp.onCreate() ──► UpdateChecker ──► UpdateNotificationHelper
 ```
 
 - **UI layer** — stateless Compose screens that observe `StateFlow` from ViewModels.
 - **ViewModel layer** — business logic, state management, Hilt-injected, coroutines on `Dispatchers.IO`.
 - **Data layer** — `VaultRepositoryImpl` coordinates the Room database and the filesystem; DAOs expose `Flow` for reactive updates.
 - **Workers layer** — `BackupWorker` runs as a `CoroutineWorker` managed by WorkManager; receives `BackupManager` via Hilt injection.
+- **Update layer** — `UpdateChecker` fetches GitHub Releases on every app launch; `UpdateNotificationHelper` posts a system notification when a newer version is found.
 
 ---
 
@@ -184,6 +192,19 @@ WorkManager ──► BackupWorker ──► BackupManager ──► ZIP (docume
 | Auto-backup interval | Every 8 hours (requires battery not low) |
 | Restore method | Settings → Backup & Restore → *Restore backup* → pick ZIP file |
 | Post-restore action | Restart the app to reload data |
+
+---
+
+## Update Checker Details
+
+| Item | Value |
+|---|---|
+| API source | GitHub Releases (`releases/latest`) |
+| Check on launch | Yes — silent background check every launch |
+| Manual check | Settings → Updates → *Check* |
+| Notification | System notification when a newer version is found |
+| In-app dialog | Shown in Settings after manual check finds an update |
+| Download | In-app with progress bar, then system APK installer |
 
 ---
 

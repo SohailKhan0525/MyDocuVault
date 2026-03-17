@@ -59,11 +59,18 @@ class SettingsViewModel @Inject constructor(
     fun checkForUpdate(context: Context, owner: String, repo: String) {
         viewModelScope.launch {
             _isChecking.value = true
-            _updateInfo.value = updateChecker.checkForUpdate(context, owner, repo)
-            if (_updateInfo.value == null) {
-                _error.value = "No updates found or network unavailable."
+            _error.value = null
+            try {
+                val info = updateChecker.checkForUpdate(context, owner, repo)
+                _updateInfo.value = info
+                if (info == null) {
+                    _error.value = "You're up to date! No newer version found."
+                }
+            } catch (_: Exception) {
+                _error.value = "Could not check for updates. Please check your internet connection."
+            } finally {
+                _isChecking.value = false
             }
-            _isChecking.value = false
         }
     }
 
