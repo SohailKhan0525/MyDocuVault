@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,7 +8,7 @@ plugins {
 }
 
 // Load signing credentials from local.properties (local dev) or environment variables (CI)
-val localProps = java.util.Properties().also { props ->
+val localProps = Properties().also { props ->
     val localPropsFile = rootProject.file("local.properties")
     if (localPropsFile.exists()) props.load(localPropsFile.inputStream())
 }
