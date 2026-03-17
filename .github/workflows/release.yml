@@ -1,4 +1,4 @@
-name: Build and Release APK
+name: Build and Release Debug APK
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build Debug and Release APK
+    name: Build Debug APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -49,55 +49,11 @@ jobs:
           echo "Debug APK found at: $DEBUG_APK"
           cp "$DEBUG_APK" "app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk"
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon
-
-      - name: Sign Release APK
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          BUILD_TOOLS=$(ls $ANDROID_SDK_ROOT/build-tools/ | sort -V | tail -1)
-          APK_PATH=$(find app/build/outputs/apk/release -name "*-unsigned.apk" -o -name "*.apk" | head -1)
-          echo "APK found at: $APK_PATH"
-          echo "Using build-tools: $BUILD_TOOLS"
-          SIGNED_APK="app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk"
-          if [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
-            $ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner sign \
-              --ks release.keystore \
-              --ks-key-alias "$KEY_ALIAS" \
-              --ks-pass "pass:$KEYSTORE_PASSWORD" \
-              --key-pass "pass:$KEY_PASSWORD" \
-              --out "$SIGNED_APK" \
-              "$APK_PATH"
-          else
-            keytool -genkey -v -keystore debug.keystore -alias mydocvault \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass android -keypass android \
-              -dname "CN=MyDocuVault, OU=Dev, O=MyDocuVault, L=City, ST=State, C=US"
-            $ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner sign \
-              --ks debug.keystore \
-              --ks-key-alias mydocvault \
-              --ks-pass pass:android \
-              --key-pass pass:android \
-              --out "$SIGNED_APK" \
-              "$APK_PATH"
-          fi
-          echo "Signed APK: $SIGNED_APK"
-
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: MyDocuVault-v${{ steps.version.outputs.version_name }}-debug
           path: app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
-
-      - name: Upload Release APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyDocuVault-v${{ steps.version.outputs.version_name }}-release
-          path: app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -109,20 +65,25 @@ jobs:
 
             ### What's New
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
-            - Bug fixes and performance improvements
+            - Backup & Restore: zip all documents and Room database to Documents/MyDocuVaultBackup/ with timestamp
+            - Auto-backup every 8 hours via WorkManager (runs when battery is not low)
+            - Restore from any previous backup ZIP file
+            - Backup and restore notifications
 
             ### Downloads
             | APK | Description |
             |-----|-------------|
             | `MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk` | Debug build for testing |
-            | `MyDocuVault-v${{ steps.version.outputs.version_name }}.apk` | Release build |
 
             ### Installation
             Download and install the APK on your Android device (API 26+).
+            Enable **Install from unknown sources** in your device settings if prompted.
+
+            ---
+            Made with ❤️ by Mohd Zaheer Uddin
           draft: false
           prerelease: false
           files: |
             app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
-            app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

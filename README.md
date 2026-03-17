@@ -12,6 +12,8 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - Inside, you can create a **nested folder hierarchy** to organise files any way you like.
 - You can **import images, PDFs, and DOCX files** from your device, then view, rename, move, or delete them at any time.
 - Everything is stored in the app's **private internal storage** — other apps cannot access your files.
+- A built-in **backup system** zips your documents and database into a single file saved to `Documents/MyDocuVaultBackup/` on your device — and can restore everything from that same file.
+- **Auto-backup** runs silently every 8 hours in the background using WorkManager so your data is always protected.
 - A built-in **update checker** notifies you when a new version is available and guides you through installing it.
 
 ---
@@ -36,6 +38,13 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - 📄 **PDF viewer** — page-by-page navigation using Android's built-in `PdfRenderer`
 - 📝 **DOCX preview** — plain-text extraction and display of Word documents
 
+### Backup & Restore
+- 💾 **Manual backup** — tap *Back up now* in Settings to create a timestamped ZIP containing all documents and the Room database
+- 📂 **Backup location** — `Documents/MyDocuVaultBackup/MyDocuVault_backup_YYYY-MM-DD_HH-mm-ss.zip`
+- ⏰ **Auto-backup** — WorkManager schedules a backup every 8 hours (runs only when battery is not low)
+- 📥 **Restore** — pick any previous backup ZIP from the file picker; documents and database are fully restored
+- 🔔 **Notifications** — silent notification confirms when auto-backup completes
+
 ### App Updates
 - 🔔 **Update checker** — queries GitHub Releases API for new versions
 - ⬇️ **In-app download & install** — downloads the APK with progress feedback and launches the installer
@@ -59,6 +68,7 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 | Database | Room 2.6.1 |
 | Preferences | DataStore 1.1.1 |
 | Navigation | Navigation Compose 2.8.0 |
+| Background Tasks | WorkManager 2.9.1 |
 | Async | Kotlin Coroutines & Flow |
 | Image Loading | Coil 2.6.0 |
 | Networking | OkHttp 4.12.0 |
@@ -87,14 +97,15 @@ app/src/main/java/com/mydocvault/
 │   └── components/ # PinDots, ZoomableImage, PdfViewer, etc.
 ├── viewmodel/      # AuthViewModel, HomeViewModel, FolderViewModel,
 │                   #   DocumentViewModel, SettingsViewModel
-└── utils/          # File helpers, DocxTextExtractor, FileType enum
+├── workers/        # BackupWorker (WorkManager)
+└── utils/          # File helpers, BackupManager, DocxTextExtractor, FileType enum
 ```
 
 ### Navigation flow
 
 ```
 Splash ──► PIN (create or unlock) ──► Home ──► Folder ──► Document
-                                           └──► Settings
+                                           └──► Settings (Security · Backup · Updates)
 ```
 
 ---
@@ -131,9 +142,6 @@ sdk.dir=/workspaces/MyDocuVault/android-sdk
 # Assemble debug APK
 ./gradlew assembleDebug
 
-# Assemble release APK
-./gradlew assembleRelease
-
 # Full build (compile + lint + test)
 ./gradlew build
 ```
@@ -143,7 +151,6 @@ sdk.dir=/workspaces/MyDocuVault/android-sdk
 | Variant | Path |
 |---|---|
 | Debug | `app/build/outputs/apk/debug/app-debug.apk` |
-| Release | `app/build/outputs/apk/release/app-release.apk` |
 
 ---
 
@@ -155,22 +162,67 @@ MyDocuVault follows the **MVVM** pattern with a unidirectional data flow:
 Compose UI  ◄──StateFlow──  ViewModel  ◄──Flow──  Repository
                                 │                      │
                            (Hilt DI)             Room DB + FileManager
+
+WorkManager ──► BackupWorker ──► BackupManager ──► ZIP (documents + DB)
 ```
 
 - **UI layer** — stateless Compose screens that observe `StateFlow` from ViewModels.
 - **ViewModel layer** — business logic, state management, Hilt-injected, coroutines on `Dispatchers.IO`.
 - **Data layer** — `VaultRepositoryImpl` coordinates the Room database and the filesystem; DAOs expose `Flow` for reactive updates.
+- **Workers layer** — `BackupWorker` runs as a `CoroutineWorker` managed by WorkManager; receives `BackupManager` via Hilt injection.
+
+---
+
+## Backup Details
+
+| Item | Value |
+|---|---|
+| Backup destination | `Documents/MyDocuVaultBackup/` on external storage |
+| File format | ZIP archive |
+| File naming | `MyDocuVault_backup_YYYY-MM-DD_HH-mm-ss.zip` |
+| Contents | `documents/` (all imported files) + `db/vault.db` (Room database + WAL) |
+| Auto-backup interval | Every 8 hours (requires battery not low) |
+| Restore method | Settings → Backup & Restore → *Restore backup* → pick ZIP file |
+| Post-restore action | Restart the app to reload data |
 
 ---
 
 ## Contributing
 
 1. Fork the repository and create a feature branch.
-2. Make your changes and ensure the project builds (`./gradlew build`).
+2. Make your changes and ensure the project builds (`./gradlew assembleDebug`).
 3. Open a pull request with a clear description of what changed and why.
 
 ---
 
 ## License
 
-This project is provided as-is. See the repository for license details.
+This project is released under the **MIT License**.
+
+```
+MIT License
+
+Copyright (c) 2024 Mohd Zaheer Uddin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+<p align="center">Made with ❤️ by Mohd Zaheer Uddin</p>
