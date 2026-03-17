@@ -1,5 +1,10 @@
 package com.mydocvault.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,9 +22,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
@@ -27,6 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,11 +59,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mydocvault.ui.navigation.NavRoutes
 import com.mydocvault.viewmodel.SettingsViewModel
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,11 +79,56 @@ fun SettingsScreen(
     val isChecking by viewModel.isChecking.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
     val error by viewModel.error.collectAsState()
+    val isBackingUp by viewModel.isBackingUp.collectAsState()
+    val isRestoring by viewModel.isRestoring.collectAsState()
+    val backupMessage by viewModel.backupMessage.collectAsState()
     var showUpdateDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     if (updateInfo != null && !showUpdateDialog) {
         showUpdateDialog = true
+    }
+
+    // Launcher to pick a backup ZIP file for restore
+    val restoreLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val tmpFile = File(context.cacheDir, "restore_pick.zip")
+            val copied = try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    tmpFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                true
+            } catch (_: Exception) {
+                false
+            }
+            if (copied) {
+                viewModel.restoreBackup(tmpFile)
+            } else {
+                viewModel.setBackupMessage("Could not read the selected file. Please try again.")
+            }
+        }
+    }
+
+    // Storage-permission launcher for Android ≤ 9
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) viewModel.createBackup()
+    }
+
+    fun onBackupClick() {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            val perm = Manifest.permission.WRITE_EXTERNAL_STORAGE
+            if (ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED) {
+                viewModel.createBackup()
+            } else {
+                storagePermissionLauncher.launch(perm)
+            }
+        } else {
+            viewModel.createBackup()
+        }
     }
 
     Scaffold(
@@ -191,6 +247,131 @@ fun SettingsScreen(
                 }
             }
 
+            // Backup & Restore card
+            SettingsCard {
+                SettingsSectionHeader(
+                    icon = Icons.Default.Backup,
+                    title = "Backup & Restore"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Backup row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            if (isBackingUp) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Backup,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Back up now",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            text = "Save to Documents/MyDocuVaultBackup",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Button(
+                        onClick = { onBackupClick() },
+                        enabled = !isBackingUp && !isRestoring,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (isBackingUp) "Saving…" else "Backup",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                // Restore row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            if (isRestoring) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Restore,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Restore backup",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            text = "Pick a .zip backup file to restore",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { restoreLauncher.launch(arrayOf("application/zip", "*/*")) },
+                        enabled = !isBackingUp && !isRestoring,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (isRestoring) "Restoring…" else "Restore",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                Text(
+                    text = "Auto-backup runs every 8 hours when battery is not low.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             // Updates card
             SettingsCard {
                 SettingsSectionHeader(
@@ -244,6 +425,17 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            // Footer
+            Text(
+                text = "Made with ❤️ by Mohd Zaheer Uddin",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            )
         }
     }
 
@@ -305,6 +497,23 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = { viewModel.clearError() },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (backupMessage != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearBackupMessage() },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("Backup & Restore") },
+            text = { Text(backupMessage ?: "", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.clearBackupMessage() },
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("OK")
