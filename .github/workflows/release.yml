@@ -1,4 +1,4 @@
-name: Build and Release Debug APK
+name: Build and Release APK
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Rename Debug APK
+      - name: Rename APKs
         run: |
           DEBUG_APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
           if [ -z "$DEBUG_APK" ]; then
@@ -48,6 +48,8 @@ jobs:
           fi
           echo "Debug APK found at: $DEBUG_APK"
           cp "$DEBUG_APK" "app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk"
+          # Also copy as the primary APK name (no -debug suffix) for the in-app update checker
+          cp "$DEBUG_APK" "app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk"
 
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
@@ -65,15 +67,18 @@ jobs:
 
             ### What's New
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
+            - Fixed PDF viewer: proper screen-width scaling, loading indicator, error handling, scrollable pages
+            - Fixed in-app update checker: now works correctly with debug APK releases
+            - Added automatic update check on launch with system notification
+            - Improved error handling across all screens to prevent crashes
             - Backup & Restore: zip all documents and Room database to Documents/MyDocuVaultBackup/ with timestamp
             - Auto-backup every 8 hours via WorkManager (runs when battery is not low)
-            - Restore from any previous backup ZIP file
-            - Backup and restore notifications
 
             ### Downloads
             | APK | Description |
             |-----|-------------|
-            | `MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk` | Debug build for testing |
+            | `MyDocuVault-v${{ steps.version.outputs.version_name }}.apk` | Main build |
+            | `MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk` | Debug build with extra logging |
 
             ### Installation
             Download and install the APK on your Android device (API 26+).
@@ -84,6 +89,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
+            app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
             app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

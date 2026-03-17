@@ -74,6 +74,7 @@ fun DocumentViewerScreen(
 
     var showSheet by remember { mutableStateOf(false) }
     var docxText by remember { mutableStateOf("") }
+    var docxError by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState()
     val replaceLauncher = rememberLauncherForActivityResult(
@@ -89,8 +90,14 @@ fun DocumentViewerScreen(
     LaunchedEffect(document?.id) {
         val doc = document ?: return@LaunchedEffect
         if (FileType.fromRaw(doc.fileType) == FileType.DOCX) {
-            docxText = withContext(Dispatchers.IO) {
-                DocxTextExtractor.extractText(File(doc.filePath))
+            docxError = false
+            docxText = try {
+                withContext(Dispatchers.IO) {
+                    DocxTextExtractor.extractText(File(doc.filePath))
+                }
+            } catch (_: Exception) {
+                docxError = true
+                ""
             }
         }
     }
@@ -142,12 +149,21 @@ fun DocumentViewerScreen(
                                 .verticalScroll(rememberScrollState())
                                 .padding(20.dp)
                         ) {
-                            Text(
-                                text = docxText.ifBlank { "No preview available" },
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                            )
+                            if (docxError) {
+                                Text(
+                                    text = "Could not extract text from this document.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.error,
+                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                                )
+                            } else {
+                                Text(
+                                    text = docxText.ifBlank { "No preview available" },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                                )
+                            }
                         }
                     }
                     else -> {
