@@ -2,15 +2,13 @@ package com.mydocvault.utils
 
 import android.content.Context
 import android.os.Environment
+import com.mydocvault.data.db.VaultDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -20,7 +18,8 @@ import javax.inject.Singleton
 
 @Singleton
 class BackupManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val db: VaultDatabase
 ) {
     companion object {
         private const val DB_NAME = "vault.db"
@@ -29,17 +28,23 @@ class BackupManager @Inject constructor(
         private const val DB_WAL_ENTRY = "db/$DB_NAME-wal"
         private const val DB_SHM_ENTRY = "db/$DB_NAME-shm"
         private const val BACKUP_DIR_NAME = "MyDocuVaultBackup"
+        private const val BACKUP_FILE_NAME = "MyDocuVault_backup.zip"
     }
 
     private val docsDir: File get() = File(context.filesDir, "documents")
 
     /** Creates a ZIP backup of all documents and the Room database.
+     *  Overwrites the previous backup file instead of creating a new one.
      *  Returns the resulting backup [File], or null on failure. */
     suspend fun createBackup(): File? = withContext(Dispatchers.IO) {
         try {
             val backupDir = getOrCreateBackupDir() ?: return@withContext null
-            val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
-            val zipFile = File(backupDir, "MyDocuVault_backup_$timestamp.zip")
+            val zipFile = File(backupDir, BACKUP_FILE_NAME)
+
+            // Checkpoint WAL so all committed data is flushed into the main DB file
+            try {
+                db.openHelper.writableDatabase.execSQL("PRAGMA wal_checkpoint(FULL)")
+            } catch (_: Exception) { /* best-effort; proceed even if checkpoint fails */ }
 
             ZipOutputStream(FileOutputStream(zipFile).buffered()).use { zos ->
                 // Add documents
@@ -93,6 +98,9 @@ class BackupManager @Inject constructor(
                 docsDir.mkdirs()
                 extractedDocs.copyRecursively(docsDir, overwrite = true)
             }
+
+            // Close the database before replacing its files so Room releases all file locks
+            db.close()
 
             // Restore database files
             restoreDbFile(tempDir, "db/$DB_NAME", DB_NAME)

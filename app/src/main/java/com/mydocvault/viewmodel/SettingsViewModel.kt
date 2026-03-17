@@ -50,6 +50,9 @@ class SettingsViewModel @Inject constructor(
     private val _backupMessage = MutableStateFlow<String?>(null)
     val backupMessage: StateFlow<String?> = _backupMessage
 
+    private val _restartApp = MutableStateFlow(false)
+    val restartApp: StateFlow<Boolean> = _restartApp
+
     fun setBiometricEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.setBiometricEnabled(enabled)
@@ -108,11 +111,14 @@ class SettingsViewModel @Inject constructor(
             _isRestoring.value = true
             val success = backupManager.restoreBackup(zipFile)
             _backupMessage.value = if (success) {
-                "Restore successful. Please restart the app."
+                "Restore successful. The app will now restart."
             } else {
                 "Restore failed. The selected file may be invalid."
             }
             _isRestoring.value = false
+            if (success) {
+                _restartApp.value = true
+            }
         }
     }
 

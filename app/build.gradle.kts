@@ -5,6 +5,14 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+// Load signing credentials from local.properties (local dev) or environment variables (CI)
+val localProps = java.util.Properties().also { props ->
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) props.load(localPropsFile.inputStream())
+}
+fun signingProp(key: String, envKey: String = key): String =
+    System.getenv(envKey) ?: localProps.getProperty(key) ?: ""
+
 android {
     namespace = "com.mydocvault"
     compileSdk = 34
@@ -22,9 +30,19 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("keystore/mydocvault.keystore")
+            storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty { "mydocvault2024" }
+            keyAlias = signingProp("KEY_ALIAS").ifEmpty { "mydocvault" }
+            keyPassword = signingProp("KEY_PASSWORD").ifEmpty { "mydocvault2024" }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -32,6 +50,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

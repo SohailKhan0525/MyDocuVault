@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build Release APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,26 +36,24 @@ jobs:
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "Version: $VERSION_NAME ($VERSION_CODE)"
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon
 
-      - name: Rename APKs
+      - name: Rename APK
         run: |
-          DEBUG_APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
-          if [ -z "$DEBUG_APK" ]; then
-            echo "Error: No debug APK found in app/build/outputs/apk/debug"
+          RELEASE_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -z "$RELEASE_APK" ]; then
+            echo "Error: No release APK found in app/build/outputs/apk/release"
             exit 1
           fi
-          echo "Debug APK found at: $DEBUG_APK"
-          cp "$DEBUG_APK" "app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk"
-          # Also copy as the primary APK name (no -debug suffix) for the in-app update checker
-          cp "$DEBUG_APK" "app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk"
+          echo "Release APK found at: $RELEASE_APK"
+          cp "$RELEASE_APK" "app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk"
 
-      - name: Upload Debug APK artifact
+      - name: Upload Release APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MyDocuVault-v${{ steps.version.outputs.version_name }}-debug
-          path: app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
+          name: MyDocuVault-v${{ steps.version.outputs.version_name }}
+          path: app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -67,18 +65,15 @@ jobs:
 
             ### What's New
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
-            - Fixed PDF viewer: proper screen-width scaling, loading indicator, error handling, scrollable pages
-            - Fixed in-app update checker: now works correctly with debug APK releases
-            - Added automatic update check on launch with system notification
-            - Improved error handling across all screens to prevent crashes
-            - Backup & Restore: zip all documents and Room database to Documents/MyDocuVaultBackup/ with timestamp
-            - Auto-backup every 8 hours via WorkManager (runs when battery is not low)
+            - Fixed "App not installed" conflict when updating: all releases now use a consistent signing key
+            - Fixed backup: each manual/auto backup now overwrites a single `MyDocuVault_backup.zip` instead of creating timestamped copies
+            - Fixed restore: database connection is properly closed before restoring DB files, ensuring a clean restore
+            - Added WAL checkpoint before backup for a complete and consistent database snapshot
 
             ### Downloads
             | APK | Description |
             |-----|-------------|
-            | `MyDocuVault-v${{ steps.version.outputs.version_name }}.apk` | Main build |
-            | `MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk` | Debug build with extra logging |
+            | `MyDocuVault-v${{ steps.version.outputs.version_name }}.apk` | Release build (use this to install/update) |
 
             ### Installation
             Download and install the APK on your Android device (API 26+).
@@ -89,7 +84,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
-            app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
+            app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
