@@ -1,7 +1,6 @@
 package com.mydocvault.utils
 
 import android.content.Context
-import android.os.Environment
 import com.mydocvault.data.db.VaultDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -99,8 +98,17 @@ class BackupManager @Inject constructor(
                 extractedDocs.copyRecursively(docsDir, overwrite = true)
             }
 
+            // Checkpoint WAL so all pending writes are flushed before closing
+            try {
+                db.openHelper.writableDatabase.execSQL("PRAGMA wal_checkpoint(FULL)")
+            } catch (_: Exception) { /* best-effort */ }
+
             // Close the database before replacing its files so Room releases all file locks
             db.close()
+
+            // Remove stale WAL / SHM files before restoring to guarantee a clean SQLite state
+            context.getDatabasePath("$DB_NAME-wal").delete()
+            context.getDatabasePath("$DB_NAME-shm").delete()
 
             // Restore database files
             restoreDbFile(tempDir, "db/$DB_NAME", DB_NAME)
@@ -117,10 +125,11 @@ class BackupManager @Inject constructor(
 
     private fun getOrCreateBackupDir(): File? {
         return try {
-            File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-                BACKUP_DIR_NAME
-            ).apply { mkdirs() }
+            // Use app-specific external storage which requires no permissions on any API level.
+            // Falls back to internal storage if external storage is unavailable.
+            val dir = context.getExternalFilesDir(BACKUP_DIR_NAME)
+                ?: File(context.filesDir, BACKUP_DIR_NAME)
+            dir.apply { mkdirs() }
         } catch (_: Exception) {
             null
         }
