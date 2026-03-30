@@ -434,7 +434,10 @@ fun SettingsScreen(
         val info = updateInfo!!
         val isDownloading = downloadProgress != null
         AlertDialog(
-            onDismissRequest = { showUpdateDialog = false },
+            onDismissRequest = {
+                showUpdateDialog = false
+                viewModel.clearUpdateInfo()
+            },
             shape = RoundedCornerShape(24.dp),
             title = { Text("Update available — ${info.versionName}") },
             text = {
@@ -470,7 +473,10 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showUpdateDialog = false },
+                    onClick = {
+                        showUpdateDialog = false
+                        viewModel.clearUpdateInfo()
+                    },
                     enabled = !isDownloading
                 ) {
                     Text("Later")

@@ -122,6 +122,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun clearUpdateInfo() {
+        _updateInfo.value = null
+    }
+
     fun clearError() {
         _error.value = null
     }
