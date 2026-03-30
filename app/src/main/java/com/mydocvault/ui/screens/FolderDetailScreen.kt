@@ -80,6 +80,7 @@ fun FolderDetailScreen(
     val context = LocalContext.current
     val folders by viewModel.subfolders.collectAsState()
     val documents by viewModel.documents.collectAsState()
+    val currentFolder by viewModel.currentFolder.collectAsState()
 
     var showSheet by remember { mutableStateOf(false) }
     var renameFolderTarget by remember { mutableStateOf<Long?>(null) }
@@ -115,7 +116,12 @@ fun FolderDetailScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Folder", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            text = currentFolder?.name ?: "Folder",
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         val count = folders.size + documents.size
                         Text(
                             text = "$count item${if (count != 1) "s" else ""}",

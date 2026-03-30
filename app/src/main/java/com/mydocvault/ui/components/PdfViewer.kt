@@ -106,6 +106,8 @@ fun PdfViewer(filePath: String) {
                 image
             }
             bitmap = bmp
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             errorMessage = "Failed to render page: ${e.localizedMessage ?: "Unknown error"}"
         } finally {

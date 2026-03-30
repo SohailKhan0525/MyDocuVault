@@ -26,6 +26,9 @@ class FolderViewModel @Inject constructor(
     val documents: StateFlow<List<DocumentEntity>> = repository.documentsByFolder(folderId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val currentFolder: StateFlow<FolderEntity?> = repository.folderById(folderId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     fun createFolder(name: String) {
         viewModelScope.launch {
             repository.createFolder(name, folderId)
