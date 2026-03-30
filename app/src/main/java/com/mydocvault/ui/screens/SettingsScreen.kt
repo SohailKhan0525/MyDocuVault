@@ -357,7 +357,7 @@ fun SettingsScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                 Text(
-                    text = "Auto-backup runs every 8 hours when battery is not low.",
+                    text = "Auto-backup runs every 2 days when battery is not low.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

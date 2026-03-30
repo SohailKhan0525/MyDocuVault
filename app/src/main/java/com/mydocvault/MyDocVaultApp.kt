@@ -54,13 +54,13 @@ class MyDocVaultApp : Application(), Configuration.Provider {
             .setRequiresBatteryNotLow(true)
             .build()
 
-        val request = PeriodicWorkRequestBuilder<BackupWorker>(8, TimeUnit.HOURS)
+        val request = PeriodicWorkRequestBuilder<BackupWorker>(2, TimeUnit.DAYS)
             .setConstraints(constraints)
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "auto_backup",
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             request
         )
     }
