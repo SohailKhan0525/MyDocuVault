@@ -78,12 +78,7 @@ jobs:
             ## MyDocuVault v${{ steps.version.outputs.version_name }}
 
             ### What's New
-            - Fixed images not loading: viewer now uses `File` model for reliable Coil image loading
-            - Fixed PDF rendering: cancelled renders no longer show spurious error messages
-            - Fixed folder title: folder detail screen now displays the actual folder name
-            - Fixed DocxTextExtractor resource leak: ZipFile is always closed properly
-            - Fixed VaultFileManager: parent directory is created before writing files
-            - Improved security: CancellationException is always rethrown correctly
+            - Fixed auto-backup schedule: now runs every 8 hours as documented (was incorrectly set to 2 days)
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
 
             ### Downloads

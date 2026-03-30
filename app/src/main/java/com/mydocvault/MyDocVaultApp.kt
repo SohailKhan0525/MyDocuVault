@@ -54,7 +54,7 @@ class MyDocVaultApp : Application(), Configuration.Provider {
             .setRequiresBatteryNotLow(true)
             .build()
 
-        val request = PeriodicWorkRequestBuilder<BackupWorker>(2, TimeUnit.DAYS)
+        val request = PeriodicWorkRequestBuilder<BackupWorker>(8, TimeUnit.HOURS)
             .setConstraints(constraints)
             .build()
 
