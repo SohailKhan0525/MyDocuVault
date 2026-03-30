@@ -17,6 +17,7 @@ class VaultFileManager(
     suspend fun importDocument(uri: Uri, displayName: String): String = withContext(Dispatchers.IO) {
         val safeName = displayName.replace("[^A-Za-z0-9._-]".toRegex(), "_")
         val target = File(docsDir, "${System.currentTimeMillis()}_$safeName")
+        target.parentFile?.mkdirs()
         context.contentResolver.openInputStream(uri)?.use { input ->
             writeStream(input, target)
         } ?: error("Unable to open input stream")
@@ -25,6 +26,7 @@ class VaultFileManager(
 
     suspend fun replaceDocument(path: String, uri: Uri) = withContext(Dispatchers.IO) {
         val target = File(path)
+        target.parentFile?.mkdirs()
         context.contentResolver.openInputStream(uri)?.use { input ->
             writeStream(input, target)
         } ?: error("Unable to open input stream")

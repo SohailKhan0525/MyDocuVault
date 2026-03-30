@@ -19,6 +19,8 @@ class VaultRepositoryImpl @Inject constructor(
 
     override fun documentsByFolder(folderId: Long?) = documentDao.getDocumentsByFolder(folderId)
 
+    override fun folderById(folderId: Long) = folderDao.getFolderByIdFlow(folderId)
+
     override suspend fun getFolder(folderId: Long): FolderEntity? = folderDao.getFolderById(folderId)
 
     override suspend fun getDocument(documentId: Long): DocumentEntity? = documentDao.getDocumentById(documentId)

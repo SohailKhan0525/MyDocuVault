@@ -36,12 +36,19 @@ jobs:
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "Version: $VERSION_NAME ($VERSION_CODE)"
 
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon
+
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Rename APK
+      - name: Rename APKs
         run: |
+          DEBUG_APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
           RELEASE_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -n "$DEBUG_APK" ]; then
+            cp "$DEBUG_APK" "app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk"
+          fi
           if [ -z "$RELEASE_APK" ]; then
             echo "Error: No release APK found in app/build/outputs/apk/release"
             exit 1
@@ -55,6 +62,13 @@ jobs:
           name: MyDocuVault-v${{ steps.version.outputs.version_name }}
           path: app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
 
+      - name: Upload Debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyDocuVault-v${{ steps.version.outputs.version_name }}-debug
+          path: app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
+          if-no-files-found: ignore
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -64,16 +78,19 @@ jobs:
             ## MyDocuVault v${{ steps.version.outputs.version_name }}
 
             ### What's New
+            - Fixed images not loading: viewer now uses `File` model for reliable Coil image loading
+            - Fixed PDF rendering: cancelled renders no longer show spurious error messages
+            - Fixed folder title: folder detail screen now displays the actual folder name
+            - Fixed DocxTextExtractor resource leak: ZipFile is always closed properly
+            - Fixed VaultFileManager: parent directory is created before writing files
+            - Improved security: CancellationException is always rethrown correctly
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
-            - Fixed "App not installed" conflict when updating: all releases now use a consistent signing key
-            - Fixed backup: each manual/auto backup now overwrites a single `MyDocuVault_backup.zip` instead of creating timestamped copies
-            - Fixed restore: database connection is properly closed before restoring DB files, ensuring a clean restore
-            - Added WAL checkpoint before backup for a complete and consistent database snapshot
 
             ### Downloads
             | APK | Description |
             |-----|-------------|
             | `MyDocuVault-v${{ steps.version.outputs.version_name }}.apk` | Release build (use this to install/update) |
+            | `MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk` | Debug build (for testing) |
 
             ### Installation
             Download and install the APK on your Android device (API 26+).
@@ -85,5 +102,6 @@ jobs:
           prerelease: false
           files: |
             app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
+            app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
