@@ -8,6 +8,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -27,18 +29,35 @@ class BackupManager @Inject constructor(
         private const val DB_WAL_ENTRY = "db/$DB_NAME-wal"
         private const val DB_SHM_ENTRY = "db/$DB_NAME-shm"
         private const val BACKUP_DIR_NAME = "MyDocuVaultBackup"
-        private const val BACKUP_FILE_NAME = "MyDocuVault_backup.zip"
+        private const val BACKUP_FILE_PREFIX = "MyDocuVault_backup_"
+        private const val BACKUP_FILE_SUFFIX = ".zip"
     }
 
     private val docsDir: File get() = File(context.filesDir, "documents")
 
+    /** Deletes all existing backup ZIP files in the backup directory. */
+    private fun deleteOldBackups(backupDir: File) {
+        backupDir.listFiles { file ->
+            file.isFile && file.name.startsWith(BACKUP_FILE_PREFIX) && file.name.endsWith(BACKUP_FILE_SUFFIX)
+        }?.forEach { file ->
+            if (!file.delete()) {
+                android.util.Log.w("BackupManager", "Failed to delete old backup: ${file.name}")
+            }
+        }
+    }
+
     /** Creates a ZIP backup of all documents and the Room database.
-     *  Overwrites the previous backup file instead of creating a new one.
+     *  Deletes any previous backups and creates a new timestamped backup file.
      *  Returns the resulting backup [File], or null on failure. */
     suspend fun createBackup(): File? = withContext(Dispatchers.IO) {
         try {
             val backupDir = getOrCreateBackupDir() ?: return@withContext null
-            val zipFile = File(backupDir, BACKUP_FILE_NAME)
+
+            // Remove old backups before creating a fresh one
+            deleteOldBackups(backupDir)
+
+            val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+            val zipFile = File(backupDir, "$BACKUP_FILE_PREFIX$timestamp$BACKUP_FILE_SUFFIX")
 
             // Checkpoint WAL so all committed data is flushed into the main DB file
             try {
