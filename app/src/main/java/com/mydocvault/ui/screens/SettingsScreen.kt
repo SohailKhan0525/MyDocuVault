@@ -96,8 +96,11 @@ fun SettingsScreen(
         }
     }
 
-    if (updateInfo != null && !showUpdateDialog) {
-        showUpdateDialog = true
+    // Only open the update dialog when updateInfo first becomes non-null (new update found)
+    LaunchedEffect(updateInfo) {
+        if (updateInfo != null) {
+            showUpdateDialog = true
+        }
     }
 
     // Launcher to pick a backup ZIP file for restore
