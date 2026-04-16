@@ -122,8 +122,8 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // 3.2.0-beta.1 is the last published release of this library (no stable release exists beyond 2.x)
-    implementation("com.github.barteksc:android-pdf-viewer:3.2.0-beta.1")
+    // Use maintained fork published to Maven Central/JitPack with compatible package names.
+    implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
