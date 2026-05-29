@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -14,6 +15,17 @@ val localProps = Properties().also { props ->
 }
 fun signingProp(key: String, envKey: String = key): String =
     System.getenv(envKey) ?: localProps.getProperty(key) ?: ""
+
+fun signingFile(path: String): File? =
+    path.takeIf { it.isNotBlank() }?.let {
+        File(it).takeIf(File::isAbsolute) ?: rootProject.file(it)
+    }
+
+val ciSigningFile = signingFile(signingProp("KEYSTORE_FILE"))
+
+check(ciSigningFile == null || ciSigningFile.exists()) {
+    "Configured KEYSTORE_FILE does not exist: ${ciSigningFile?.absolutePath}"
+}
 
 android {
     namespace = "com.mydocvault"
@@ -34,13 +46,20 @@ android {
 
     signingConfigs {
         getByName("debug") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            if (ciSigningFile != null) {
+                storeFile = ciSigningFile
+                storePassword = signingProp("KEYSTORE_PASSWORD")
+                keyAlias = signingProp("KEY_ALIAS")
+                keyPassword = signingProp("KEY_PASSWORD")
+            } else {
+                storeFile = file("debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
         create("release") {
-            storeFile = file("keystore/mydocvault.keystore")
+            storeFile = ciSigningFile ?: file("keystore/mydocvault.keystore")
             storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty { "mydocvault2024" }
             keyAlias = signingProp("KEY_ALIAS").ifEmpty { "mydocvault" }
             keyPassword = signingProp("KEY_PASSWORD").ifEmpty { "mydocvault2024" }
