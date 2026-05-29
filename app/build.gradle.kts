@@ -15,6 +15,9 @@ val localProps = Properties().also { props ->
 fun signingProp(key: String, envKey: String = key): String =
     System.getenv(envKey) ?: localProps.getProperty(key) ?: ""
 
+val sharedKeystorePath = signingProp("KEYSTORE_FILE")
+val useSharedKeystore = sharedKeystorePath.isNotBlank()
+
 android {
     namespace = "com.mydocvault"
     compileSdk = 34
@@ -34,13 +37,19 @@ android {
 
     signingConfigs {
         getByName("debug") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            storeFile = file(sharedKeystorePath.ifEmpty { "debug.keystore" })
+            storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty {
+                if (useSharedKeystore) "mydocvault2024" else "android"
+            }
+            keyAlias = signingProp("KEY_ALIAS").ifEmpty {
+                if (useSharedKeystore) "mydocvault" else "androiddebugkey"
+            }
+            keyPassword = signingProp("KEY_PASSWORD").ifEmpty {
+                if (useSharedKeystore) "mydocvault2024" else "android"
+            }
         }
         create("release") {
-            storeFile = file("keystore/mydocvault.keystore")
+            storeFile = file(sharedKeystorePath.ifEmpty { "keystore/mydocvault.keystore" })
             storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty { "mydocvault2024" }
             keyAlias = signingProp("KEY_ALIAS").ifEmpty { "mydocvault" }
             keyPassword = signingProp("KEY_PASSWORD").ifEmpty { "mydocvault2024" }

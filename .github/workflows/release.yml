@@ -12,6 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      KEYSTORE_FILE: app/keystore/mydocvault.keystore
+      KEYSTORE_PASSWORD: mydocvault2024
+      KEY_ALIAS: mydocvault
+      KEY_PASSWORD: mydocvault2024
 
     steps:
       - name: Checkout code
@@ -67,7 +72,7 @@ jobs:
         with:
           name: MyDocuVault-v${{ steps.version.outputs.version_name }}-debug
           path: app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
-          if-no-files-found: ignore
+          if-no-files-found: error
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
