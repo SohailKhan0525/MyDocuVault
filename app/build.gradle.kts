@@ -17,6 +17,12 @@ fun signingProp(key: String, envKey: String = key): String =
 
 val sharedKeystorePath = signingProp("KEYSTORE_FILE")
 val useSharedKeystore = sharedKeystorePath.isNotBlank()
+val sharedKeystoreFile = if (useSharedKeystore) {
+    val providedFile = java.io.File(sharedKeystorePath)
+    if (providedFile.isAbsolute) providedFile else rootProject.file(sharedKeystorePath)
+} else {
+    null
+}
 
 android {
     namespace = "com.mydocvault"
@@ -26,8 +32,8 @@ android {
         applicationId = "com.mydocvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.5.0"
+        versionCode = 13
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -37,7 +43,7 @@ android {
 
     signingConfigs {
         getByName("debug") {
-            storeFile = file(sharedKeystorePath.ifEmpty { "debug.keystore" })
+            storeFile = sharedKeystoreFile ?: file("debug.keystore")
             storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty {
                 if (useSharedKeystore) "mydocvault2024" else "android"
             }
@@ -49,7 +55,7 @@ android {
             }
         }
         create("release") {
-            storeFile = file(sharedKeystorePath.ifEmpty { "keystore/mydocvault.keystore" })
+            storeFile = sharedKeystoreFile ?: file("keystore/mydocvault.keystore")
             storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty { "mydocvault2024" }
             keyAlias = signingProp("KEY_ALIAS").ifEmpty { "mydocvault" }
             keyPassword = signingProp("KEY_PASSWORD").ifEmpty { "mydocvault2024" }
