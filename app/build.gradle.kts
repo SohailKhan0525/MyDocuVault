@@ -1,4 +1,6 @@
 import java.util.Properties
+import java.io.File
+import org.gradle.api.GradleException
 
 plugins {
     id("com.android.application")
@@ -15,6 +17,20 @@ val localProps = Properties().also { props ->
 fun signingProp(key: String, envKey: String = key): String =
     System.getenv(envKey) ?: localProps.getProperty(key) ?: ""
 
+/** Resolves keystore path from env/local props, supporting absolute, module-relative, and root-relative paths. */
+fun resolveStoreFile(configuredPath: String, defaultRelativePath: String): File {
+    if (configuredPath.isBlank()) return file(defaultRelativePath)
+    val provided = File(configuredPath)
+    if (provided.isAbsolute) return provided
+    val moduleRelative = file(configuredPath)
+    if (moduleRelative.exists()) return moduleRelative
+    val rootRelative = rootProject.file(configuredPath)
+    if (rootRelative.exists()) return rootRelative
+    throw GradleException(
+        "Keystore file '$configuredPath' not found. Checked '${moduleRelative.path}' and '${rootRelative.path}'."
+    )
+}
+
 val sharedKeystorePath = signingProp("KEYSTORE_FILE")
 val useSharedKeystore = sharedKeystorePath.isNotBlank()
 
@@ -26,10 +42,9 @@ android {
         applicationId = "com.mydocvault"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.5.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 13
+        versionName = "1.6.0"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -37,7 +52,7 @@ android {
 
     signingConfigs {
         getByName("debug") {
-            storeFile = file(sharedKeystorePath.ifEmpty { "debug.keystore" })
+            storeFile = resolveStoreFile(sharedKeystorePath, "debug.keystore")
             storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty {
                 if (useSharedKeystore) "mydocvault2024" else "android"
             }
@@ -49,7 +64,7 @@ android {
             }
         }
         create("release") {
-            storeFile = file(sharedKeystorePath.ifEmpty { "keystore/mydocvault.keystore" })
+            storeFile = resolveStoreFile(sharedKeystorePath, "keystore/mydocvault.keystore")
             storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty { "mydocvault2024" }
             keyAlias = signingProp("KEY_ALIAS").ifEmpty { "mydocvault" }
             keyPassword = signingProp("KEY_PASSWORD").ifEmpty { "mydocvault2024" }
