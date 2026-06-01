@@ -68,10 +68,11 @@ class UpdateChecker @Inject constructor(
         onProgress: (Int) -> Unit
     ): File = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(apkUrl).build()
-        val file = File(context.getExternalFilesDir(null), "mydocvault_update.apk")
+        val outputDir = context.getExternalFilesDir(null) ?: context.filesDir
+        val file = File(outputDir, "mydocvault_update.apk")
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) error("Download failed")
-            val body = response.body ?: error("Empty response")
+            if (!response.isSuccessful) error("Download failed with HTTP ${response.code}")
+            val body = response.body ?: error("Download failed: empty response body")
             val total = body.contentLength().coerceAtLeast(1)
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             var downloaded = 0L
@@ -88,6 +89,9 @@ class UpdateChecker @Inject constructor(
                 }
             }
         }
+        if (!file.exists() || file.length() <= 0L) {
+            error("Download failed: APK file is empty")
+        }
         file
     }
 
@@ -101,6 +105,10 @@ class UpdateChecker @Inject constructor(
             setDataAndType(uri, "application/vnd.android.package-archive")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val packageManager = context.packageManager
+        if (intent.resolveActivity(packageManager) == null) {
+            error("No app found to install APK files on this device")
         }
         context.startActivity(intent)
     }
