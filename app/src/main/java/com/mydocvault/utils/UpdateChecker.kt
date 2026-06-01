@@ -108,7 +108,7 @@ class UpdateChecker @Inject constructor(
         }
         val packageManager = context.packageManager
         if (intent.resolveActivity(packageManager) == null) {
-            error("No app found to install APK files on this device")
+            error("Unable to install updates on this device. Please check your device settings.")
         }
         context.startActivity(intent)
     }

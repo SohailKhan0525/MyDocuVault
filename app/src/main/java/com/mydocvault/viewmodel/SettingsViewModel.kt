@@ -71,9 +71,7 @@ class SettingsViewModel @Inject constructor(
                     _error.value = "You're up to date! No newer version found."
                 }
             } catch (e: Exception) {
-                val fullError = e.stackTraceToString()
-                _error.value = fullError
-                GlobalErrorBus.emit(fullError)
+                handleError(e) { _error.value = it }
             } finally {
                 _isChecking.value = false
             }
@@ -89,9 +87,7 @@ class SettingsViewModel @Inject constructor(
                 }
                 updateChecker.startInstall(context, file)
             } catch (e: Exception) {
-                val fullError = e.stackTraceToString()
-                _error.value = fullError
-                GlobalErrorBus.emit(fullError)
+                handleError(e) { _error.value = it }
             } finally {
                 _downloadProgress.value = null
             }
@@ -109,9 +105,7 @@ class SettingsViewModel @Inject constructor(
                     "Backup failed. Please try again."
                 }
             } catch (e: Exception) {
-                val fullError = e.stackTraceToString()
-                _backupMessage.value = fullError
-                GlobalErrorBus.emit(fullError)
+                handleError(e) { _backupMessage.value = it }
             } finally {
                 _isBackingUp.value = false
             }
@@ -132,9 +126,7 @@ class SettingsViewModel @Inject constructor(
                     _restartApp.value = true
                 }
             } catch (e: Exception) {
-                val fullError = e.stackTraceToString()
-                _backupMessage.value = fullError
-                GlobalErrorBus.emit(fullError)
+                handleError(e) { _backupMessage.value = it }
             } finally {
                 _isRestoring.value = false
             }
@@ -155,5 +147,11 @@ class SettingsViewModel @Inject constructor(
 
     fun setBackupMessage(message: String) {
         _backupMessage.value = message
+    }
+
+    private fun handleError(exception: Exception, sink: (String) -> Unit) {
+        val fullError = exception.stackTraceToString()
+        sink(fullError)
+        GlobalErrorBus.emit(fullError)
     }
 }

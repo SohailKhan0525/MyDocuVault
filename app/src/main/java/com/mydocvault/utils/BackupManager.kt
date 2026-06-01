@@ -9,6 +9,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.OutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipEntry
@@ -40,7 +41,9 @@ class BackupManager @Inject constructor(
     private fun deleteOldBackups(vararg backupDirs: File) {
         backupDirs.forEach { backupDir ->
             backupDir.listFiles { file ->
-                file.isFile && file.name.endsWith(BACKUP_FILE_SUFFIX)
+                file.isFile &&
+                    file.name.startsWith(BACKUP_FILE_PREFIX) &&
+                    file.name.endsWith(BACKUP_FILE_SUFFIX)
             }?.forEach { file ->
             if (!file.delete()) {
                 android.util.Log.w("BackupManager", "Failed to delete old backup: ${file.name}")
@@ -163,6 +166,9 @@ class BackupManager @Inject constructor(
     }
 
     private fun getLegacyBackupDir(): File {
+        // Older versions wrote backups directly under getExternalFilesDir(BACKUP_DIR_NAME).
+        // Keep cleaning this location so users migrating to the Documents-based location
+        // don't accumulate stale backup archives.
         return context.getExternalFilesDir(BACKUP_DIR_NAME) ?: File(context.filesDir, BACKUP_DIR_NAME)
     }
 
@@ -185,11 +191,11 @@ class BackupManager @Inject constructor(
         val outFile = File(rootDir, entryName)
         val canonicalRoot = rootDir.canonicalPath + File.separator
         val canonicalOut = outFile.canonicalPath
-        require(canonicalOut.startsWith(canonicalRoot)) { "Invalid backup entry path: $entryName" }
+        require(canonicalOut.startsWith(canonicalRoot)) { "Invalid backup entry path" }
         return outFile
     }
 
-    private fun copyStream(input: InputStream, output: java.io.OutputStream) {
+    private fun copyStream(input: InputStream, output: OutputStream) {
         val buffer = ByteArray(8192)
         var bytesRead: Int
         while (input.read(buffer).also { bytesRead = it } != -1) {
