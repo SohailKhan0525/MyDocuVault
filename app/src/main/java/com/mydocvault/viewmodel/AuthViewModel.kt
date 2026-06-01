@@ -26,6 +26,12 @@ class AuthViewModel @Inject constructor(
         false
     )
 
+    val onboardingCompleted: StateFlow<Boolean> = prefs.onboardingCompletedFlow.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        false
+    )
+
     suspend fun setPin(pin: String) {
         prefs.setPin(pin)
     }
@@ -43,6 +49,12 @@ class AuthViewModel @Inject constructor(
     fun setBiometricEnabled(enabled: Boolean) {
         viewModelScope.launch {
             prefs.setBiometricEnabled(enabled)
+        }
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        viewModelScope.launch {
+            prefs.setOnboardingCompleted(completed)
         }
     }
 }

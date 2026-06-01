@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.mydocvault.data.entity.DocumentEntity
 import com.mydocvault.data.entity.FolderEntity
 import com.mydocvault.data.repository.VaultRepository
+import com.mydocvault.utils.GlobalErrorBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,21 +30,33 @@ class DocumentViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _document.value = repository.getDocument(documentId)
+            try {
+                _document.value = repository.getDocument(documentId)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Load document failed")
+            }
         }
     }
 
     fun moveDocument(documentId: Long, folderId: Long?) {
         viewModelScope.launch {
-            repository.moveDocument(documentId, folderId)
-            _document.value = repository.getDocument(documentId)
+            try {
+                repository.moveDocument(documentId, folderId)
+                _document.value = repository.getDocument(documentId)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Move document failed")
+            }
         }
     }
 
     fun replaceDocument(documentId: Long, uri: android.net.Uri) {
         viewModelScope.launch {
-            repository.replaceDocument(documentId, uri)
-            _document.value = repository.getDocument(documentId)
+            try {
+                repository.replaceDocument(documentId, uri)
+                _document.value = repository.getDocument(documentId)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Replace document failed")
+            }
         }
     }
 }

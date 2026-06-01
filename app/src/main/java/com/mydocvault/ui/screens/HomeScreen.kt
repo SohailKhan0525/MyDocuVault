@@ -69,6 +69,7 @@ import com.mydocvault.ui.components.EmptyState
 import com.mydocvault.ui.components.RenameDialog
 import com.mydocvault.ui.navigation.NavRoutes
 import com.mydocvault.utils.FileType
+import com.mydocvault.utils.detectFileType
 import com.mydocvault.utils.getDocumentDisplayName
 import com.mydocvault.viewmodel.HomeViewModel
 
@@ -90,7 +91,7 @@ fun HomeScreen(
         onResult = { uri: Uri? ->
             if (uri != null) {
                 val name = getDocumentDisplayName(context, uri)
-                val type = FileType.fromFileName(name).raw
+                val type = detectFileType(context, uri, name).raw
                 viewModel.importDocument(uri, name, type)
             }
         }
@@ -101,7 +102,7 @@ fun HomeScreen(
         onResult = { uris ->
             uris.forEach { uri ->
                 val name = getDocumentDisplayName(context, uri)
-                val type = FileType.fromFileName(name).let { if (it == FileType.OTHER) FileType.IMAGE else it }.raw
+                val type = detectFileType(context, uri, name).let { if (it == FileType.OTHER) FileType.IMAGE else it }.raw
                 viewModel.importDocument(uri, name, type)
             }
         }
@@ -236,10 +237,10 @@ fun HomeScreen(
                 BottomSheetItem(
                     icon = Icons.Default.FileOpen,
                     title = "Import document",
-                    subtitle = "PDF, DOCX",
+                    subtitle = "All file types",
                     onClick = {
                         showSheet = false
-                        docLauncher.launch(arrayOf("application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        docLauncher.launch(arrayOf("*/*"))
                     }
                 )
                 Spacer(modifier = Modifier.height(24.dp))

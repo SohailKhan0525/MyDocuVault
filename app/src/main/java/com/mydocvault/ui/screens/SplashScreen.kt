@@ -38,6 +38,7 @@ fun SplashScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val pin by viewModel.pinState.collectAsState()
+    val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()
     val scale = remember { Animatable(0.6f) }
 
     LaunchedEffect(Unit) {
@@ -47,9 +48,13 @@ fun SplashScreen(
         )
     }
 
-    LaunchedEffect(pin) {
+    LaunchedEffect(pin, onboardingCompleted) {
         delay(700)
-        if (pin.isNullOrBlank()) {
+        if (!onboardingCompleted) {
+            navController.navigate(NavRoutes.Onboarding) {
+                popUpTo(NavRoutes.Splash) { inclusive = true }
+            }
+        } else if (pin.isNullOrBlank()) {
             navController.navigate("${NavRoutes.Pin}?mode=create") {
                 popUpTo(NavRoutes.Splash) { inclusive = true }
             }

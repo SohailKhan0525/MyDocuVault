@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mydocvault.data.preferences.UserPreferences
 import com.mydocvault.utils.BackupManager
+import com.mydocvault.utils.GlobalErrorBus
 import com.mydocvault.utils.UpdateChecker
 import com.mydocvault.utils.UpdateInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -69,8 +70,10 @@ class SettingsViewModel @Inject constructor(
                 if (info == null) {
                     _error.value = "You're up to date! No newer version found."
                 }
-            } catch (_: Exception) {
-                _error.value = "Could not check for updates. Please check your internet connection."
+            } catch (e: Exception) {
+                val fullError = e.stackTraceToString()
+                _error.value = fullError
+                GlobalErrorBus.emit(fullError)
             } finally {
                 _isChecking.value = false
             }
@@ -85,8 +88,10 @@ class SettingsViewModel @Inject constructor(
                     _downloadProgress.value = percent
                 }
                 updateChecker.startInstall(context, file)
-            } catch (_: Exception) {
-                _error.value = "Download failed. Please try again."
+            } catch (e: Exception) {
+                val fullError = e.stackTraceToString()
+                _error.value = fullError
+                GlobalErrorBus.emit(fullError)
             } finally {
                 _downloadProgress.value = null
             }
@@ -96,28 +101,42 @@ class SettingsViewModel @Inject constructor(
     fun createBackup() {
         viewModelScope.launch {
             _isBackingUp.value = true
-            val file = backupManager.createBackup()
-            _backupMessage.value = if (file != null) {
-                "Backup saved.\nLocation: ${file.absolutePath}"
-            } else {
-                "Backup failed. Please try again."
+            try {
+                val file = backupManager.createBackup()
+                _backupMessage.value = if (file != null) {
+                    "Backup saved.\nLocation: ${file.absolutePath}"
+                } else {
+                    "Backup failed. Please try again."
+                }
+            } catch (e: Exception) {
+                val fullError = e.stackTraceToString()
+                _backupMessage.value = fullError
+                GlobalErrorBus.emit(fullError)
+            } finally {
+                _isBackingUp.value = false
             }
-            _isBackingUp.value = false
         }
     }
 
     fun restoreBackup(zipFile: File) {
         viewModelScope.launch {
             _isRestoring.value = true
-            val success = backupManager.restoreBackup(zipFile)
-            _backupMessage.value = if (success) {
-                "Restore successful. The app will now restart."
-            } else {
-                "Restore failed. The selected file may be invalid."
-            }
-            _isRestoring.value = false
-            if (success) {
-                _restartApp.value = true
+            try {
+                val success = backupManager.restoreBackup(zipFile)
+                _backupMessage.value = if (success) {
+                    "Restore successful. The app will now restart."
+                } else {
+                    "Restore failed. The selected file may be invalid."
+                }
+                if (success) {
+                    _restartApp.value = true
+                }
+            } catch (e: Exception) {
+                val fullError = e.stackTraceToString()
+                _backupMessage.value = fullError
+                GlobalErrorBus.emit(fullError)
+            } finally {
+                _isRestoring.value = false
             }
         }
     }

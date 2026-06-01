@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.mydocvault.data.entity.DocumentEntity
 import com.mydocvault.data.entity.FolderEntity
 import com.mydocvault.data.repository.VaultRepository
+import com.mydocvault.utils.GlobalErrorBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,49 +32,81 @@ class FolderViewModel @Inject constructor(
 
     fun createFolder(name: String) {
         viewModelScope.launch {
-            repository.createFolder(name, folderId)
+            try {
+                repository.createFolder(name, folderId)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Create folder failed")
+            }
         }
     }
 
     fun renameFolder(targetId: Long, name: String) {
         viewModelScope.launch {
-            repository.renameFolder(targetId, name)
+            try {
+                repository.renameFolder(targetId, name)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Rename folder failed")
+            }
         }
     }
 
     fun deleteFolder(targetId: Long) {
         viewModelScope.launch {
-            repository.deleteFolderRecursive(targetId)
+            try {
+                repository.deleteFolderRecursive(targetId)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Delete folder failed")
+            }
         }
     }
 
     fun renameDocument(documentId: Long, name: String) {
         viewModelScope.launch {
-            repository.renameDocument(documentId, name)
+            try {
+                repository.renameDocument(documentId, name)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Rename document failed")
+            }
         }
     }
 
     fun deleteDocument(documentId: Long) {
         viewModelScope.launch {
-            repository.deleteDocument(documentId)
+            try {
+                repository.deleteDocument(documentId)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Delete document failed")
+            }
         }
     }
 
     fun replaceDocument(documentId: Long, uri: android.net.Uri) {
         viewModelScope.launch {
-            repository.replaceDocument(documentId, uri)
+            try {
+                repository.replaceDocument(documentId, uri)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Replace document failed")
+            }
         }
     }
 
     fun moveDocument(documentId: Long, newFolderId: Long?) {
         viewModelScope.launch {
-            repository.moveDocument(documentId, newFolderId)
+            try {
+                repository.moveDocument(documentId, newFolderId)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Move document failed")
+            }
         }
     }
 
     fun importDocument(uri: android.net.Uri, name: String, type: String) {
         viewModelScope.launch {
-            repository.importDocument(uri, name, folderId, type)
+            try {
+                repository.importDocument(uri, name, folderId, type)
+            } catch (e: Exception) {
+                GlobalErrorBus.emit(e, "Import document failed")
+            }
         }
     }
 }

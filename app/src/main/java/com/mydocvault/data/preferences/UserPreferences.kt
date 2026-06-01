@@ -21,6 +21,7 @@ class UserPreferences @Inject constructor(
 ) {
     private val pinKey = stringPreferencesKey("pin")
     private val biometricEnabledKey = booleanPreferencesKey("biometric_enabled")
+    private val onboardingCompletedKey = booleanPreferencesKey("onboarding_completed")
 
     val pinFlow: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[pinKey]
@@ -28,6 +29,10 @@ class UserPreferences @Inject constructor(
 
     val biometricEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[biometricEnabledKey] ?: false
+    }
+
+    val onboardingCompletedFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[onboardingCompletedKey] ?: false
     }
 
     suspend fun setPin(pin: String) {
@@ -45,6 +50,12 @@ class UserPreferences @Inject constructor(
     suspend fun setBiometricEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[biometricEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[onboardingCompletedKey] = completed
         }
     }
 }

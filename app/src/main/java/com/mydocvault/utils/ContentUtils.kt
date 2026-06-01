@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -13,6 +14,13 @@ fun getDocumentDisplayName(context: Context, uri: Uri): String {
         val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
         if (nameIndex >= 0 && cursor.moveToFirst()) {
             return cursor.getString(nameIndex)
+        }
+
+        fun detectFileType(context: Context, uri: Uri, displayName: String): FileType {
+            val mimeType = context.contentResolver.getType(uri)
+            val fromMime = FileType.fromMimeType(mimeType)
+            if (fromMime != FileType.OTHER) return fromMime
+            return FileType.fromFileName(displayName)
         }
     }
     return uri.lastPathSegment?.substringAfterLast('/') ?: "Imported_${System.currentTimeMillis()}"
@@ -26,12 +34,7 @@ fun shareDocument(context: Context, filePath: String, fileType: FileType) {
         "${context.packageName}.fileprovider",
         file
     )
-    val mimeType = when (fileType) {
-        FileType.IMAGE -> "image/*"
-        FileType.PDF -> "application/pdf"
-        FileType.DOCX -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        FileType.OTHER -> "*/*"
-    }
+    val mimeType = guessMimeType(file.path, fileType)
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = mimeType
         putExtra(Intent.EXTRA_STREAM, contentUri)
@@ -41,4 +44,16 @@ fun shareDocument(context: Context, filePath: String, fileType: FileType) {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(chooser)
+}
+
+private fun guessMimeType(path: String, fileType: FileType): String {
+    val extension = path.substringAfterLast('.', "").lowercase()
+    val extensionMime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+    if (!extensionMime.isNullOrBlank()) return extensionMime
+    return when (fileType) {
+        FileType.IMAGE -> "image/*"
+        FileType.PDF -> "application/pdf"
+        FileType.DOCX -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        FileType.OTHER -> "*/*"
+    }
 }

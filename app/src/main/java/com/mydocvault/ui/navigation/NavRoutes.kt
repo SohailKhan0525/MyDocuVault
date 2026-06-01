@@ -2,6 +2,7 @@ package com.mydocvault.ui.navigation
 
 object NavRoutes {
     const val Splash = "splash"
+    const val Onboarding = "onboarding"
     const val Pin = "pin"
     const val Home = "home"
     const val Folder = "folder"
