@@ -15,15 +15,15 @@ fun getDocumentDisplayName(context: Context, uri: Uri): String {
         if (nameIndex >= 0 && cursor.moveToFirst()) {
             return cursor.getString(nameIndex)
         }
-
-        fun detectFileType(context: Context, uri: Uri, displayName: String): FileType {
-            val mimeType = context.contentResolver.getType(uri)
-            val fromMime = FileType.fromMimeType(mimeType)
-            if (fromMime != FileType.OTHER) return fromMime
-            return FileType.fromFileName(displayName)
-        }
     }
     return uri.lastPathSegment?.substringAfterLast('/') ?: "Imported_${System.currentTimeMillis()}"
+}
+
+fun detectFileType(context: Context, uri: Uri, displayName: String): FileType {
+    val mimeType = context.contentResolver.getType(uri)
+    val fromMime = FileType.fromMimeType(mimeType)
+    if (fromMime != FileType.OTHER) return fromMime
+    return FileType.fromFileName(displayName)
 }
 
 fun shareDocument(context: Context, filePath: String, fileType: FileType) {

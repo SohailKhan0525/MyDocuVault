@@ -10,7 +10,6 @@ import androidx.navigation.compose.rememberNavController
 import com.mydocvault.ui.navigation.AppNavGraph
 import com.mydocvault.ui.theme.MyDocVaultTheme
 import com.mydocvault.utils.GlobalErrorBus
-import kotlinx.coroutines.flow.collect
 
 @Composable
 fun MyDocVaultApp() {
