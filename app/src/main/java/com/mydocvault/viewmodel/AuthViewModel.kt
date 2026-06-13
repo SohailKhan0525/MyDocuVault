@@ -26,6 +26,18 @@ class AuthViewModel @Inject constructor(
         false
     )
 
+    val onboardingCompleted: StateFlow<Boolean> = prefs.onboardingCompletedFlow.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        false
+    )
+
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            prefs.setOnboardingCompleted(true)
+        }
+    }
+
     suspend fun setPin(pin: String) {
         prefs.setPin(pin)
     }

@@ -9,6 +9,7 @@ import androidx.navigation.NavType
 import com.mydocvault.ui.screens.DocumentViewerScreen
 import com.mydocvault.ui.screens.FolderDetailScreen
 import com.mydocvault.ui.screens.HomeScreen
+import com.mydocvault.ui.screens.OnboardingScreen
 import com.mydocvault.ui.screens.PinScreen
 import com.mydocvault.ui.screens.SettingsScreen
 import com.mydocvault.ui.screens.SplashScreen
@@ -18,6 +19,9 @@ fun AppNavGraph(navController: NavHostController) {
     NavHost(navController = navController, startDestination = NavRoutes.Splash) {
         composable(NavRoutes.Splash) {
             SplashScreen(navController)
+        }
+        composable(NavRoutes.Onboarding) {
+            OnboardingScreen(navController)
         }
         composable(
             route = "${NavRoutes.Pin}?mode={mode}",

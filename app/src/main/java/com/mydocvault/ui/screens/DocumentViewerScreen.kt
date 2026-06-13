@@ -62,6 +62,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
+import android.content.Intent
+import androidx.core.content.FileProvider
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.width
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentViewerScreen(
@@ -142,6 +148,12 @@ fun DocumentViewerScreen(
                 when (FileType.fromRaw(doc.fileType)) {
                     FileType.IMAGE -> ZoomableImage(path = doc.filePath)
                     FileType.PDF -> PdfViewer(filePath = doc.filePath)
+import android.content.Intent
+import androidx.core.content.FileProvider
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.width
+
                     FileType.DOCX -> {
                         Column(
                             modifier = Modifier
@@ -173,12 +185,12 @@ fun DocumentViewerScreen(
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 Surface(
                                     shape = CircleShape,
                                     color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.size(64.dp)
+                                    modifier = Modifier.size(80.dp)
                                 ) {
                                     Box(
                                         contentAlignment = Alignment.Center,
@@ -187,16 +199,41 @@ fun DocumentViewerScreen(
                                         Icon(
                                             imageVector = Icons.Default.FolderOpen,
                                             contentDescription = null,
-                                            modifier = Modifier.size(32.dp),
+                                            modifier = Modifier.size(40.dp),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
-                                Text(
-                                    text = "Unsupported file type",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = doc.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                    Text(
+                                        text = "No built-in preview available",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        try {
+                                            val file = File(doc.filePath)
+                                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                setDataAndType(uri, "*/*")
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "Open with"))
+                                        } catch (e: Exception) {
+                                            android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.width(200.dp)
+                                ) {
+                                    Text("Open externally")
+                                }
                             }
                         }
                     }
