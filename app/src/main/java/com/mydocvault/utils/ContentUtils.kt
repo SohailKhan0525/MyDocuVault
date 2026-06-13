@@ -30,7 +30,11 @@ fun shareDocument(context: Context, filePath: String, fileType: FileType) {
         FileType.IMAGE -> "image/*"
         FileType.PDF -> "application/pdf"
         FileType.DOCX -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        FileType.OTHER -> "*/*"
+        FileType.VIDEO -> "video/*"
+        FileType.AUDIO -> "audio/*"
+        FileType.TEXT -> "text/*"
+        FileType.ARCHIVE -> "application/zip"
+        else -> "*/*"
     }
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = mimeType
