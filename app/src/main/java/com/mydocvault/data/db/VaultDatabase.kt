@@ -9,7 +9,7 @@ import com.mydocvault.data.entity.FolderEntity
 
 @Database(
     entities = [FolderEntity::class, DocumentEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class VaultDatabase : RoomDatabase() {

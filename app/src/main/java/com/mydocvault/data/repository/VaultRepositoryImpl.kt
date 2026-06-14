@@ -51,7 +51,8 @@ class VaultRepositoryImpl @Inject constructor(
         uri: Uri,
         displayName: String,
         folderId: Long?,
-        fileType: String
+        fileType: String,
+        notes: String?
     ): Long {
         val path = fileManager.importDocument(uri, displayName)
         val now = System.currentTimeMillis()
@@ -60,6 +61,7 @@ class VaultRepositoryImpl @Inject constructor(
             folderId = folderId,
             filePath = path,
             fileType = fileType,
+            notes = notes,
             createdAt = now,
             updatedAt = now
         )

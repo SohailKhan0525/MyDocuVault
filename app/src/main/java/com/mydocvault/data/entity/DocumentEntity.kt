@@ -11,6 +11,7 @@ data class DocumentEntity(
     val folderId: Long? = null,
     val filePath: String,
     val fileType: String,
+    val notes: String? = null,
     val createdAt: Long,
     val updatedAt: Long
 )

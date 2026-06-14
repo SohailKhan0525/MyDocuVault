@@ -22,7 +22,8 @@ interface VaultRepository {
         uri: Uri,
         displayName: String,
         folderId: Long?,
-        fileType: String
+        fileType: String,
+        notes: String? = null
     ): Long
 
     suspend fun renameDocument(documentId: Long, newName: String)

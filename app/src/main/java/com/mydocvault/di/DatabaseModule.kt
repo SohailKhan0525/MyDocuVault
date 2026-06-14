@@ -18,7 +18,13 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): VaultDatabase {
+        val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE documents ADD COLUMN notes TEXT")
+            }
+        }
         return Room.databaseBuilder(context, VaultDatabase::class.java, "vault.db")
+            .addMigrations(MIGRATION_1_2)
             .fallbackToDestructiveMigration()
             .build()
     }
