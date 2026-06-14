@@ -88,9 +88,25 @@ class ImportActivity : ComponentActivity() {
             }
         }
         var name = result ?: "Unknown File"
-        if (!name.contains(".")) {
+        
+        val fileType = com.mydocvault.utils.FileType.fromFileName(name)
+        if (fileType == com.mydocvault.utils.FileType.OTHER) {
             val mimeType = getMimeType(uri)
-            val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+            var ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+            
+            // Fallbacks for common mime types if MimeTypeMap fails
+            if (ext.isNullOrEmpty()) {
+                ext = when (mimeType) {
+                    "image/jpeg" -> "jpg"
+                    "image/png" -> "png"
+                    "application/pdf" -> "pdf"
+                    "application/msword" -> "doc"
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> "docx"
+                    "text/plain" -> "txt"
+                    else -> null
+                }
+            }
+            
             if (!ext.isNullOrEmpty()) {
                 name = "$name.$ext"
             }
@@ -143,7 +159,7 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                     }
                     Button(
                         onClick = { viewModel.importFiles() },
-                        enabled = !isImporting && items.isNotEmpty()
+                        enabled = !isImporting && items.isNotEmpty() && items.none { it.isUnsupported }
                     ) {
                         Text(if (isImporting) "Importing..." else "Save")
                     }
@@ -187,6 +203,10 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                             value = item.baseName,
                             onValueChange = { viewModel.updateItemName(index, it) },
                             label = { Text("Rename File") },
+                            isError = item.isUnsupported,
+                            supportingText = if (item.isUnsupported) {
+                                { Text("Unsupported file type. Cannot import.", color = MaterialTheme.colorScheme.error) }
+                            } else null,
                             trailingIcon = {
                                 if (item.extension.isNotEmpty()) {
                                     Text(

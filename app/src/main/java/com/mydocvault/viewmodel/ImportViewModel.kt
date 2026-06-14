@@ -21,6 +21,7 @@ data class ImportItem(
     val notes: String = ""
 ) {
     val newFullName get() = if (extension.isEmpty()) baseName else "$baseName.$extension"
+    val isUnsupported get() = com.mydocvault.utils.FileType.fromFileName(newFullName) == com.mydocvault.utils.FileType.OTHER || extension.isEmpty()
 }
 
 @HiltViewModel
