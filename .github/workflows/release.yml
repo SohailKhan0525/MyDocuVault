@@ -83,8 +83,8 @@ jobs:
             ## MyDocuVault v${{ steps.version.outputs.version_name }}
 
             ### What's New
-            - Fixed file preview not showing after import from share sheet
-            - Added strict validation to prevent changing file extensions during import
+            - Locked file extensions during import to prevent accidental modification or removal
+            - Fixed edge case where files shared without extensions caused preview failures
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
 
             ### Downloads

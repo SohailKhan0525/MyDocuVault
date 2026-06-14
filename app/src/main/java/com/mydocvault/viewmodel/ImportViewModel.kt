@@ -16,10 +16,12 @@ data class ImportItem(
     val uri: Uri,
     val originalName: String,
     val mimeType: String,
-    val newName: String = originalName,
-    val notes: String = "",
-    val error: String? = null
-)
+    val baseName: String,
+    val extension: String,
+    val notes: String = ""
+) {
+    val newFullName get() = if (extension.isEmpty()) baseName else "$baseName.$extension"
+}
 
 @HiltViewModel
 class ImportViewModel @Inject constructor(
@@ -51,28 +53,24 @@ class ImportViewModel @Inject constructor(
 
     fun setItems(uris: List<Uri>, nameResolver: (Uri) -> String, mimeResolver: (Uri) -> String) {
         _items.value = uris.map { uri ->
+            val originalName = nameResolver(uri)
+            val dotIndex = originalName.lastIndexOf('.')
+            val baseName = if (dotIndex >= 0) originalName.substring(0, dotIndex) else originalName
+            val extension = if (dotIndex >= 0) originalName.substring(dotIndex + 1) else ""
+            
             ImportItem(
                 uri = uri,
-                originalName = nameResolver(uri),
-                mimeType = mimeResolver(uri)
+                originalName = originalName,
+                mimeType = mimeResolver(uri),
+                baseName = baseName,
+                extension = extension
             )
         }
     }
 
-    fun updateItemName(index: Int, newName: String) {
+    fun updateItemName(index: Int, newBaseName: String) {
         val current = _items.value.toMutableList()
-        val item = current[index]
-        
-        val originalExt = if (item.originalName.contains(".")) item.originalName.substringAfterLast('.') else ""
-        val newExt = if (newName.contains(".")) newName.substringAfterLast('.') else ""
-        
-        val error = if (originalExt.isNotEmpty() && newExt != originalExt) {
-            "File extension must remain .$originalExt"
-        } else {
-            null
-        }
-        
-        current[index] = item.copy(newName = newName, error = error)
+        current[index] = current[index].copy(baseName = newBaseName)
         _items.value = current
     }
 
@@ -88,13 +86,12 @@ class ImportViewModel @Inject constructor(
 
     fun importFiles() {
         if (_items.value.isEmpty()) return
-        if (_items.value.any { it.error != null }) return
         
         viewModelScope.launch {
             _isImporting.value = true
             val folderId = _selectedFolder.value?.id
             _items.value.forEach { item ->
-                val finalName = item.newName.ifBlank { item.originalName }
+                val finalName = item.newFullName.ifBlank { item.originalName }
                 val fileType = com.mydocvault.utils.FileType.fromFileName(finalName).raw
                 repository.importDocument(
                     uri = item.uri,

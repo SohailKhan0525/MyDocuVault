@@ -87,7 +87,15 @@ class ImportActivity : ComponentActivity() {
                 result = result?.substring(cut + 1)
             }
         }
-        return result ?: "Unknown File"
+        var name = result ?: "Unknown File"
+        if (!name.contains(".")) {
+            val mimeType = getMimeType(uri)
+            val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+            if (!ext.isNullOrEmpty()) {
+                name = "$name.$ext"
+            }
+        }
+        return name
     }
 
     private fun getMimeType(uri: Uri): String {
@@ -135,7 +143,7 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                     }
                     Button(
                         onClick = { viewModel.importFiles() },
-                        enabled = !isImporting && items.isNotEmpty() && items.none { it.error != null }
+                        enabled = !isImporting && items.isNotEmpty()
                     ) {
                         Text(if (isImporting) "Importing..." else "Save")
                     }
@@ -176,11 +184,18 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
-                            value = item.newName,
+                            value = item.baseName,
                             onValueChange = { viewModel.updateItemName(index, it) },
                             label = { Text("Rename File") },
-                            isError = item.error != null,
-                            supportingText = item.error?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                            trailingIcon = {
+                                if (item.extension.isNotEmpty()) {
+                                    Text(
+                                        text = ".${item.extension}",
+                                        modifier = Modifier.padding(end = 16.dp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
