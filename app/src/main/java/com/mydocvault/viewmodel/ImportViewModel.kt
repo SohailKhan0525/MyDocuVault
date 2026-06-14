@@ -17,7 +17,8 @@ data class ImportItem(
     val originalName: String,
     val mimeType: String,
     val newName: String = originalName,
-    val notes: String = ""
+    val notes: String = "",
+    val error: String? = null
 )
 
 @HiltViewModel
@@ -60,7 +61,18 @@ class ImportViewModel @Inject constructor(
 
     fun updateItemName(index: Int, newName: String) {
         val current = _items.value.toMutableList()
-        current[index] = current[index].copy(newName = newName)
+        val item = current[index]
+        
+        val originalExt = if (item.originalName.contains(".")) item.originalName.substringAfterLast('.') else ""
+        val newExt = if (newName.contains(".")) newName.substringAfterLast('.') else ""
+        
+        val error = if (originalExt.isNotEmpty() && newExt != originalExt) {
+            "File extension must remain .$originalExt"
+        } else {
+            null
+        }
+        
+        current[index] = item.copy(newName = newName, error = error)
         _items.value = current
     }
 
@@ -76,15 +88,19 @@ class ImportViewModel @Inject constructor(
 
     fun importFiles() {
         if (_items.value.isEmpty()) return
+        if (_items.value.any { it.error != null }) return
+        
         viewModelScope.launch {
             _isImporting.value = true
             val folderId = _selectedFolder.value?.id
             _items.value.forEach { item ->
+                val finalName = item.newName.ifBlank { item.originalName }
+                val fileType = com.mydocvault.utils.FileType.fromFileName(finalName).raw
                 repository.importDocument(
                     uri = item.uri,
-                    displayName = item.newName.ifBlank { item.originalName },
+                    displayName = finalName,
                     folderId = folderId,
-                    fileType = item.mimeType,
+                    fileType = fileType,
                     notes = item.notes.ifBlank { null }
                 )
             }

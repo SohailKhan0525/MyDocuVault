@@ -83,7 +83,8 @@ jobs:
             ## MyDocuVault v${{ steps.version.outputs.version_name }}
 
             ### What's New
-            - Added Android Share Sheet integration to save files directly from other apps
+            - Fixed file preview not showing after import from share sheet
+            - Added strict validation to prevent changing file extensions during import
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
 
             ### Downloads

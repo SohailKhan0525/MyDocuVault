@@ -135,7 +135,7 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                     }
                     Button(
                         onClick = { viewModel.importFiles() },
-                        enabled = !isImporting && items.isNotEmpty()
+                        enabled = !isImporting && items.isNotEmpty() && items.none { it.error != null }
                     ) {
                         Text(if (isImporting) "Importing..." else "Save")
                     }
@@ -179,6 +179,8 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                             value = item.newName,
                             onValueChange = { viewModel.updateItemName(index, it) },
                             label = { Text("Rename File") },
+                            isError = item.error != null,
+                            supportingText = item.error?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
