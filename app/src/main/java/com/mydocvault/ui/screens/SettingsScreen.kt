@@ -2,6 +2,7 @@ package com.mydocvault.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
@@ -39,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -61,6 +64,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.mydocvault.data.preferences.UserPreferences
 import com.mydocvault.ui.navigation.NavRoutes
 import com.mydocvault.viewmodel.SettingsViewModel
 import java.io.File
@@ -247,7 +251,7 @@ fun SettingsScreen(
 
             SettingsCard {
                 SettingsSectionHeader(
-                    icon = androidx.compose.material.icons.filled.Folder,
+                    icon = Icons.Default.Folder,
                     title = "Storage Location"
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -265,7 +269,7 @@ fun SettingsScreen(
                     ) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.filled.Folder,
+                                imageVector = Icons.Default.Folder,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
@@ -275,8 +279,8 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         val currentLabel = when (storageLocation) {
-                            com.mydocvault.data.preferences.UserPreferences.STORAGE_DOWNLOADS -> "Downloads (/Download/MyDocuVault)"
-                            com.mydocvault.data.preferences.UserPreferences.STORAGE_INTERNAL -> "Internal App Storage (Private)"
+                            UserPreferences.STORAGE_DOWNLOADS -> "Downloads (/Download/MyDocuVault)"
+                            UserPreferences.STORAGE_INTERNAL -> "Internal App Storage (Private)"
                             else -> "Documents (/Documents/MyDocuVault)"
                         }
                         Text(
@@ -314,22 +318,22 @@ fun SettingsScreen(
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             val options = listOf(
-                                com.mydocvault.data.preferences.UserPreferences.STORAGE_DOCUMENTS to "Documents (Documents/MyDocuVault)",
-                                com.mydocvault.data.preferences.UserPreferences.STORAGE_DOWNLOADS to "Downloads (Download/MyDocuVault)",
-                                com.mydocvault.data.preferences.UserPreferences.STORAGE_INTERNAL to "Internal App Storage (Private & Sandboxed)"
+                                UserPreferences.STORAGE_DOCUMENTS to "Documents (Documents/MyDocuVault)",
+                                UserPreferences.STORAGE_DOWNLOADS to "Downloads (Download/MyDocuVault)",
+                                UserPreferences.STORAGE_INTERNAL to "Internal App Storage (Private & Sandboxed)"
                             )
                             options.forEach { (key, title) ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .androidx.compose.foundation.clickable {
+                                        .clickable {
                                             viewModel.setStorageLocation(key)
                                             showStorageDialog = false
                                         }
                                         .padding(vertical = 10.dp, horizontal = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    androidx.compose.material3.RadioButton(
+                                    RadioButton(
                                         selected = storageLocation == key,
                                         onClick = {
                                             viewModel.setStorageLocation(key)
