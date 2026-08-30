@@ -9,6 +9,11 @@ interface VaultRepository {
     fun foldersByParent(parentId: Long?): Flow<List<FolderEntity>>
     fun allFolders(): Flow<List<FolderEntity>>
     fun documentsByFolder(folderId: Long?): Flow<List<DocumentEntity>>
+    fun allDocuments(): Flow<List<DocumentEntity>>
+    fun searchDocuments(query: String): Flow<List<DocumentEntity>>
+    fun searchDocumentsInFolder(folderId: Long?, query: String): Flow<List<DocumentEntity>>
+    fun searchFolders(query: String): Flow<List<FolderEntity>>
+    fun searchSubfolders(parentId: Long?, query: String): Flow<List<FolderEntity>>
     fun folderById(folderId: Long): Flow<FolderEntity?>
 
     suspend fun getFolder(folderId: Long): FolderEntity?

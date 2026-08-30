@@ -241,6 +241,115 @@ fun SettingsScreen(
                 }
             }
 
+            // Storage Location Card
+            val storageLocation by viewModel.storageLocation.collectAsState()
+            var showStorageDialog by remember { mutableStateOf(false) }
+
+            SettingsCard {
+                SettingsSectionHeader(
+                    icon = androidx.compose.material.icons.filled.Folder,
+                    title = "Storage Location"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.filled.Folder,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        val currentLabel = when (storageLocation) {
+                            com.mydocvault.data.preferences.UserPreferences.STORAGE_DOWNLOADS -> "Downloads (/Download/MyDocuVault)"
+                            com.mydocvault.data.preferences.UserPreferences.STORAGE_INTERNAL -> "Internal App Storage (Private)"
+                            else -> "Documents (/Documents/MyDocuVault)"
+                        }
+                        Text(
+                            text = "Save files to",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            text = currentLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { showStorageDialog = true },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Change", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                Text(
+                    text = "New folders and imported files will be organized in this location. Your existing files remain completely safe and accessible.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (showStorageDialog) {
+                AlertDialog(
+                    onDismissRequest = { showStorageDialog = false },
+                    shape = RoundedCornerShape(24.dp),
+                    title = { Text("Choose Storage Location") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val options = listOf(
+                                com.mydocvault.data.preferences.UserPreferences.STORAGE_DOCUMENTS to "Documents (Documents/MyDocuVault)",
+                                com.mydocvault.data.preferences.UserPreferences.STORAGE_DOWNLOADS to "Downloads (Download/MyDocuVault)",
+                                com.mydocvault.data.preferences.UserPreferences.STORAGE_INTERNAL to "Internal App Storage (Private & Sandboxed)"
+                            )
+                            options.forEach { (key, title) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .androidx.compose.foundation.clickable {
+                                            viewModel.setStorageLocation(key)
+                                            showStorageDialog = false
+                                        }
+                                        .padding(vertical = 10.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    androidx.compose.material3.RadioButton(
+                                        selected = storageLocation == key,
+                                        onClick = {
+                                            viewModel.setStorageLocation(key)
+                                            showStorageDialog = false
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = title, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showStorageDialog = false }) {
+                            Text("Done")
+                        }
+                    }
+                )
+            }
+
             // Backup & Restore card
             SettingsCard {
                 SettingsSectionHeader(

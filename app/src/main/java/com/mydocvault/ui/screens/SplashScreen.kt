@@ -35,7 +35,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(
     navController: NavController,
-    viewModel: AuthViewModel = hiltViewModel()
+    viewModel: AuthViewModel = hiltViewModel(),
+    initialDocumentId: Long? = null
 ) {
     val pin by viewModel.pinState.collectAsState()
     val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()

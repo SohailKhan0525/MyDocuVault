@@ -18,16 +18,24 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 
 ---
 
-## Features
+### Search & Discovery
+- 🔍 **Full Vault Search** — instant real-time search across all folders and documents by name, notes, or file type
+- 🏷️ **Type Filters** — filter search results by Images, PDFs, or Word/Docs with one tap
+- 📂 **In-Folder Filtering** — quickly find specific items inside large folders
+
+### Interoperability & Sharing
+- 📲 **Open with MyDocu** — open files directly from WhatsApp, Telegram, Gmail, and file managers with instant import into your chosen vault folder
+- 📤 **Preserved File Names on Sharing** — original document names are cleanly preserved when sharing files with other apps
+- 🗂️ **Configurable Storage Location** — choose where your documents are stored (Documents, Downloads, or Private App Storage) with automatic disk folder creation
 
 ### Security
 - 🔒 **PIN lock** — 4-digit PIN required on every app launch
 - 👆 **Biometric unlock** — optional fingerprint, face, or iris authentication
-- 🗄️ **Private storage** — files saved to app-scoped internal storage, inaccessible to other apps
+- 🗄️ **Private & Configurable Storage** — files saved safely to chosen storage location or app-scoped internal storage
 - 📵 **Fully offline** — no accounts, no cloud, no tracking
 
 ### File Management
-- 📁 **Nested folders** — create, rename, and delete folders at any depth
+- 📁 **Nested folders** — create, rename, and delete folders at any depth on disk and in database
 - 📥 **Import documents** — bring in JPG/PNG images, PDF files, and DOCX files
 - ✏️ **Rename & move** — reorganise documents without re-importing
 - 🔄 **Replace** — swap a document's file while keeping its metadata

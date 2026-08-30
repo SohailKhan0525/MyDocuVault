@@ -28,6 +28,18 @@ class SettingsViewModel @Inject constructor(
         false
     )
 
+    val storageLocation: StateFlow<String> = prefs.storageLocationFlow.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        UserPreferences.STORAGE_DOCUMENTS
+    )
+
+    fun setStorageLocation(location: String) {
+        viewModelScope.launch {
+            prefs.setStorageLocation(location)
+        }
+    }
+
     private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
     val updateInfo: StateFlow<UpdateInfo?> = _updateInfo
 

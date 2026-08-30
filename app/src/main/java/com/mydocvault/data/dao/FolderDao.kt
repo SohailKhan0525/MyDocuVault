@@ -35,6 +35,12 @@ interface FolderDao {
     @Delete
     suspend fun delete(folder: FolderEntity)
 
+    @Query("SELECT * FROM folders WHERE name LIKE '%' || :query || '%' ORDER BY name ASC")
+    fun searchFolders(query: String): Flow<List<FolderEntity>>
+
+    @Query("SELECT * FROM folders WHERE parentFolderId IS :parentId AND name LIKE '%' || :query || '%' ORDER BY name ASC")
+    fun searchFoldersByParent(parentId: Long?, query: String): Flow<List<FolderEntity>>
+
     @Query("DELETE FROM folders WHERE id = :folderId")
     suspend fun deleteById(folderId: Long)
 }

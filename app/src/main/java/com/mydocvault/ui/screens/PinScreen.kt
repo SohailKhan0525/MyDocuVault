@@ -61,7 +61,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 fun PinScreen(
     navController: NavController,
-    viewModel: AuthViewModel = hiltViewModel()
+    viewModel: AuthViewModel = hiltViewModel(),
+    initialDocumentId: Long? = null
 ) {
     val mode = navController.currentBackStackEntry?.arguments?.getString("mode") ?: "unlock"
     val biometricEnabled by viewModel.biometricEnabled.collectAsState()
@@ -224,14 +225,16 @@ fun PinScreen(
                             if (isCreate) {
                                 scope.launch {
                                     viewModel.setPin(pin)
-                                    navController.navigate(NavRoutes.Home) {
+                                    val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
+                                    navController.navigate(destination) {
                                         popUpTo(NavRoutes.Pin) { inclusive = true }
                                     }
                                 }
                             } else {
                                 val current = savedPin
                                 if (!current.isNullOrBlank() && pin == current) {
-                                    navController.navigate(NavRoutes.Home) {
+                                    val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
+                                    navController.navigate(destination) {
                                         popUpTo(NavRoutes.Pin) { inclusive = true }
                                     }
                                 } else {
@@ -265,7 +268,8 @@ fun PinScreen(
                                         title = "Unlock MyDocVault",
                                         subtitle = "Use your biometric",
                                         onSuccess = {
-                                            navController.navigate(NavRoutes.Home) {
+                                            val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
+                                            navController.navigate(destination) {
                                                 popUpTo(NavRoutes.Pin) { inclusive = true }
                                             }
                                         },

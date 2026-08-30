@@ -256,7 +256,7 @@ fun DocumentViewerScreen(
                     subtitle = "Send via WhatsApp, email, or other apps",
                     onClick = {
                         showSheet = false
-                        shareDocument(context, doc.filePath, FileType.fromRaw(doc.fileType))
+                        shareDocument(context, doc)
                     }
                 )
                 DocSheetItem(

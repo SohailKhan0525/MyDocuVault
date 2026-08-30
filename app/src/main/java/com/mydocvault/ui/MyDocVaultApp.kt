@@ -9,10 +9,10 @@ import com.mydocvault.ui.navigation.AppNavGraph
 import com.mydocvault.ui.theme.MyDocVaultTheme
 
 @Composable
-fun MyDocVaultApp() {
+fun MyDocVaultApp(initialDocumentId: Long? = null) {
     val navController = rememberNavController()
     val darkTheme = isSystemInDarkTheme()
     MyDocVaultTheme(darkTheme = darkTheme) {
-        AppNavGraph(navController = navController)
+        AppNavGraph(navController = navController, initialDocumentId = initialDocumentId)
     }
 }

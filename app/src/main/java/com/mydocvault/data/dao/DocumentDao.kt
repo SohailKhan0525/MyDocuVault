@@ -29,6 +29,15 @@ interface DocumentDao {
     @Query("DELETE FROM documents WHERE id = :documentId")
     suspend fun deleteById(documentId: Long)
 
+    @Query("SELECT * FROM documents ORDER BY updatedAt DESC")
+    fun getAllDocuments(): Flow<List<DocumentEntity>>
+
+    @Query("SELECT * FROM documents WHERE name LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%' ORDER BY updatedAt DESC")
+    fun searchDocuments(query: String): Flow<List<DocumentEntity>>
+
+    @Query("SELECT * FROM documents WHERE folderId IS :folderId AND (name LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%') ORDER BY updatedAt DESC")
+    fun searchDocumentsInFolder(folderId: Long?, query: String): Flow<List<DocumentEntity>>
+
     @Query("SELECT * FROM documents WHERE folderId IS :folderId")
     suspend fun getDocumentsByFolderOnce(folderId: Long?): List<DocumentEntity>
 }

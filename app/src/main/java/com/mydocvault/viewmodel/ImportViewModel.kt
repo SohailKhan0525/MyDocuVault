@@ -44,6 +44,9 @@ class ImportViewModel @Inject constructor(
     private val _importComplete = MutableStateFlow(false)
     val importComplete: StateFlow<Boolean> = _importComplete.asStateFlow()
 
+    private val _lastImportedDocId = MutableStateFlow<Long?>(null)
+    val lastImportedDocId: StateFlow<Long?> = _lastImportedDocId.asStateFlow()
+
     init {
         viewModelScope.launch {
             repository.allFolders().collect { list ->
@@ -85,16 +88,28 @@ class ImportViewModel @Inject constructor(
         _selectedFolder.value = folder
     }
 
-    fun importFiles() {
+    fun createFolder(name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            val newId = repository.createFolder(name.trim(), null)
+            val folder = repository.getFolder(newId)
+            if (folder != null) {
+                _selectedFolder.value = folder
+            }
+        }
+    }
+
+    fun importFiles(onFinished: ((Long?) -> Unit)? = null) {
         if (_items.value.isEmpty()) return
         
         viewModelScope.launch {
             _isImporting.value = true
             val folderId = _selectedFolder.value?.id
+            var lastId: Long? = null
             _items.value.forEach { item ->
                 val finalName = item.newFullName.ifBlank { item.originalName }
                 val fileType = com.mydocvault.utils.FileType.fromFileName(finalName).raw
-                repository.importDocument(
+                lastId = repository.importDocument(
                     uri = item.uri,
                     displayName = finalName,
                     folderId = folderId,
@@ -102,8 +117,10 @@ class ImportViewModel @Inject constructor(
                     notes = item.notes.ifBlank { null }
                 )
             }
+            _lastImportedDocId.value = lastId
             _isImporting.value = false
             _importComplete.value = true
+            onFinished?.invoke(lastId)
         }
     }
 }

@@ -19,7 +19,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFileManager(@ApplicationContext context: Context): VaultFileManager {
-        return VaultFileManager(context)
+    fun provideFileManager(
+        @ApplicationContext context: Context,
+        userPreferences: com.mydocvault.data.preferences.UserPreferences
+    ): VaultFileManager {
+        return VaultFileManager(context, userPreferences)
     }
 }

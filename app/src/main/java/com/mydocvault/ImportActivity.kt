@@ -47,7 +47,10 @@ class ImportActivity : ComponentActivity() {
         if (intent == null) return
         val uris = mutableListOf<Uri>()
 
-        if (intent.action == Intent.ACTION_SEND) {
+        if (intent.action == Intent.ACTION_VIEW) {
+            val uri = intent.data
+            if (uri != null) uris.add(uri)
+        } else if (intent.action == Intent.ACTION_SEND) {
             val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
             if (uri != null) uris.add(uri)
         } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
@@ -56,7 +59,7 @@ class ImportActivity : ComponentActivity() {
         }
 
         if (uris.isEmpty()) {
-            Toast.makeText(this, "No files to import", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No files to open or import", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -132,9 +135,18 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
     val selectedFolder by viewModel.selectedFolder.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
     val importComplete by viewModel.importComplete.collectAsState()
+    val lastDocId by viewModel.lastImportedDocId.collectAsState()
+    val context = LocalContext.current
 
     if (importComplete) {
         LaunchedEffect(Unit) {
+            if (lastDocId != null) {
+                val intent = Intent(context, MainActivity::class.java).apply {
+                    putExtra("open_document_id", lastDocId)
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                }
+                context.startActivity(intent)
+            }
             onFinish()
         }
     }
@@ -142,7 +154,7 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Import Files") }
+                title = { Text("Open in MyDocuVault") }
             )
         },
         bottomBar = {
@@ -161,7 +173,7 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                         onClick = { viewModel.importFiles() },
                         enabled = !isImporting && items.isNotEmpty() && items.none { it.isUnsupported }
                     ) {
-                        Text(if (isImporting) "Importing..." else "Save")
+                        Text(if (isImporting) "Opening…" else "Save & Open")
                     }
                 }
             }
@@ -178,10 +190,11 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                 FolderSelector(
                     folders = folders,
                     selectedFolder = selectedFolder,
-                    onFolderSelected = { viewModel.selectFolder(it) }
+                    onFolderSelected = { viewModel.selectFolder(it) },
+                    onCreateFolder = { viewModel.createFolder(it) }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Files to Import", style = MaterialTheme.typography.titleMedium)
+                Text("Files to Open & Save", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
             }
             
@@ -202,10 +215,10 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                         OutlinedTextField(
                             value = item.baseName,
                             onValueChange = { viewModel.updateItemName(index, it) },
-                            label = { Text("Rename File") },
+                            label = { Text("Document Name") },
                             isError = item.isUnsupported,
                             supportingText = if (item.isUnsupported) {
-                                { Text("Unsupported file type. Cannot import.", color = MaterialTheme.colorScheme.error) }
+                                { Text("Unsupported file type. Cannot open.", color = MaterialTheme.colorScheme.error) }
                             } else null,
                             trailingIcon = {
                                 if (item.extension.isNotEmpty()) {
@@ -242,9 +255,11 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
 fun FolderSelector(
     folders: List<FolderEntity>,
     selectedFolder: FolderEntity?,
-    onFolderSelected: (FolderEntity?) -> Unit
+    onFolderSelected: (FolderEntity?) -> Unit,
+    onCreateFolder: (String) -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showCreateDialog by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -254,7 +269,7 @@ fun FolderSelector(
             value = selectedFolder?.name ?: "Root Directory",
             onValueChange = {},
             readOnly = true,
-            label = { Text("Destination Folder") },
+            label = { Text("Destination Vault Folder") },
             trailingIcon = {
                 Icon(
                     imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
@@ -285,6 +300,27 @@ fun FolderSelector(
                     }
                 )
             }
+            DropdownMenuItem(
+                text = { Text("+ Create New Folder…", color = MaterialTheme.colorScheme.primary) },
+                onClick = {
+                    expanded = false
+                    showCreateDialog = true
+                }
+            )
         }
+    }
+
+    if (showCreateDialog) {
+        com.mydocvault.ui.components.RenameDialog(
+            title = "Create New Folder",
+            initial = "",
+            onConfirm = { name ->
+                if (name.isNotBlank()) {
+                    onCreateFolder(name.trim())
+                }
+                showCreateDialog = false
+            },
+            onDismiss = { showCreateDialog = false }
+        )
     }
 }

@@ -71,6 +71,16 @@ import com.mydocvault.utils.FileType
 import com.mydocvault.utils.getDocumentDisplayName
 import com.mydocvault.viewmodel.FolderViewModel
 
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FolderDetailScreen(
@@ -78,10 +88,15 @@ fun FolderDetailScreen(
     viewModel: FolderViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val folders by viewModel.subfolders.collectAsState()
-    val documents by viewModel.documents.collectAsState()
+    val focusManager = LocalFocusManager.current
+    val folders by viewModel.filteredSubfolders.collectAsState()
+    val documents by viewModel.filteredDocuments.collectAsState()
+    val rawFolders by viewModel.subfolders.collectAsState()
+    val rawDocuments by viewModel.documents.collectAsState()
     val currentFolder by viewModel.currentFolder.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
+    var isSearchActive by remember { mutableStateOf(false) }
     var showSheet by remember { mutableStateOf(false) }
     var renameFolderTarget by remember { mutableStateOf<Long?>(null) }
     var renameDocTarget by remember { mutableStateOf<Long?>(null) }
@@ -113,35 +128,86 @@ fun FolderDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = currentFolder?.name ?: "Folder",
-                            style = MaterialTheme.typography.titleLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+            if (isSearchActive) {
+                TopAppBar(
+                    title = {
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.onSearchQueryChanged(it) },
+                            placeholder = { Text("Search in this folder…") },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        val count = folders.size + documents.size
-                        Text(
-                            text = "$count item${if (count != 1) "s" else ""}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            isSearchActive = false
+                            viewModel.clearSearch()
+                        }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close search")
+                        }
+                    },
+                    actions = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                                Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear query")
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
+            } else {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = currentFolder?.name ?: "Folder",
+                                style = MaterialTheme.typography.titleLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            val count = rawFolders.size + rawDocuments.size
+                            Text(
+                                text = "$count item${if (count != 1) "s" else ""}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
+                    actions = {
+                        if (rawFolders.isNotEmpty() || rawDocuments.isNotEmpty()) {
+                            IconButton(onClick = { isSearchActive = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search folder",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -156,11 +222,17 @@ fun FolderDetailScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (folders.isEmpty() && documents.isEmpty()) {
+            if (rawFolders.isEmpty() && rawDocuments.isEmpty()) {
                 EmptyState(
                     title = "Empty folder",
                     subtitle = "Add subfolders or import documents",
                     icon = Icons.Default.Folder
+                )
+            } else if (folders.isEmpty() && documents.isEmpty() && searchQuery.isNotBlank()) {
+                EmptyState(
+                    title = "No results found",
+                    subtitle = "No matching items in this folder",
+                    icon = Icons.Default.Search
                 )
             } else {
                 LazyColumn(
@@ -169,7 +241,7 @@ fun FolderDetailScreen(
                 ) {
                     if (folders.isNotEmpty()) {
                         item {
-                            SectionLabel("Folders")
+                            SectionLabel("Folders (${folders.size})")
                         }
                         items(folders, key = { it.id }) { folder ->
                             val dismissState = rememberSwipeToDismissBoxState(
@@ -210,7 +282,7 @@ fun FolderDetailScreen(
 
                     if (documents.isNotEmpty()) {
                         item {
-                            SectionLabel("Documents", topPadding = if (folders.isNotEmpty()) 8.dp else 0.dp)
+                            SectionLabel("Documents (${documents.size})", topPadding = if (folders.isNotEmpty()) 8.dp else 0.dp)
                         }
                         items(documents, key = { it.id }) { doc ->
                             val dismissState = rememberSwipeToDismissBoxState(
@@ -249,7 +321,7 @@ fun FolderDetailScreen(
                                 }
                                 ItemCard(
                                     name = doc.name,
-                                    subtitle = doc.fileType.uppercase(),
+                                    subtitle = doc.fileType.uppercase() + if (!doc.notes.isNullOrBlank()) " • ${doc.notes}" else "",
                                     icon = docIcon,
                                     iconContainerColor = docIconColor.copy(alpha = 0.12f),
                                     iconTint = docIconColor,

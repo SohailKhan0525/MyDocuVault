@@ -15,10 +15,13 @@ import com.mydocvault.ui.screens.SettingsScreen
 import com.mydocvault.ui.screens.SplashScreen
 
 @Composable
-fun AppNavGraph(navController: NavHostController) {
+fun AppNavGraph(
+    navController: NavHostController,
+    initialDocumentId: Long? = null
+) {
     NavHost(navController = navController, startDestination = NavRoutes.Splash) {
         composable(NavRoutes.Splash) {
-            SplashScreen(navController)
+            SplashScreen(navController, initialDocumentId = initialDocumentId)
         }
         composable(NavRoutes.Onboarding) {
             OnboardingScreen(navController)
@@ -27,7 +30,7 @@ fun AppNavGraph(navController: NavHostController) {
             route = "${NavRoutes.Pin}?mode={mode}",
             arguments = listOf(navArgument("mode") { type = NavType.StringType; defaultValue = "unlock" })
         ) {
-            PinScreen(navController)
+            PinScreen(navController, initialDocumentId = initialDocumentId)
         }
         composable(NavRoutes.Home) {
             HomeScreen(navController)
