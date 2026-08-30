@@ -62,13 +62,20 @@ class VaultRepositoryImpl @Inject constructor(
 
     override suspend fun renameFolder(folderId: Long, newName: String) {
         val folder = folderDao.getFolderById(folderId) ?: return
+        val oldPath = getFolderRelativePath(folderId)
         folderDao.update(folder.copy(name = newName))
-        val parentPath = getFolderRelativePath(folder.parentFolderId)
-        val sanitizedName = newName.replace("[^A-Za-z0-9._ -]".toRegex(), "_")
-        val newPath = if (parentPath.isEmpty()) sanitizedName else "$parentPath/$sanitizedName"
-        try {
-            fileManager.createFolderDirectory(newPath)
-        } catch (_: Exception) {}
+        val newPath = getFolderRelativePath(folderId)
+        if (oldPath.isNotBlank() && newPath.isNotBlank() && oldPath != newPath) {
+            try {
+                fileManager.renameFolder(oldPath, newPath)
+                // Update file paths for all documents in this folder
+                val docs = documentDao.getDocumentsByFolderOnce(folderId)
+                docs.forEach { doc ->
+                    val updatedFilePath = doc.filePath.replace("/$oldPath/", "/$newPath/")
+                    documentDao.update(doc.copy(filePath = updatedFilePath))
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     override suspend fun deleteFolderRecursive(folderId: Long) {
@@ -114,7 +121,9 @@ class VaultRepositoryImpl @Inject constructor(
 
     override suspend fun renameDocument(documentId: Long, newName: String) {
         val doc = documentDao.getDocumentById(documentId) ?: return
-        documentDao.update(doc.copy(name = newName, updatedAt = System.currentTimeMillis()))
+        val newFilePath = fileManager.renameDocument(doc.filePath, newName)
+        val finalDisplayName = java.io.File(newFilePath).name
+        documentDao.update(doc.copy(name = finalDisplayName, filePath = newFilePath, updatedAt = System.currentTimeMillis()))
     }
 
     override suspend fun deleteDocument(documentId: Long) {

@@ -1,9 +1,11 @@
 package com.mydocvault.utils
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.mydocvault.data.entity.DocumentEntity
 import java.io.File
@@ -15,10 +17,19 @@ fun getDocumentDisplayName(context: Context, uri: Uri): String {
     resolver.query(uri, null, null, null, null)?.use { cursor ->
         val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
         if (nameIndex >= 0 && cursor.moveToFirst()) {
-            return cursor.getString(nameIndex)
+            val name = cursor.getString(nameIndex)
+            if (!name.isNullOrBlank()) {
+                return name
+            }
         }
     }
-    return uri.lastPathSegment?.substringAfterLast('/') ?: "Imported_${System.currentTimeMillis()}"
+    val fallback = uri.lastPathSegment?.substringAfterLast('/')
+    if (!fallback.isNullOrBlank()) {
+        return fallback
+    }
+    val mimeType = resolver.getType(uri)
+    val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "bin"
+    return "Document_${System.currentTimeMillis()}.$ext"
 }
 
 fun shareDocument(context: Context, document: DocumentEntity) {
@@ -34,16 +45,37 @@ fun shareDocument(
     val sourceFile = File(filePath)
     if (!sourceFile.exists() || !sourceFile.canRead()) return
 
-    val targetName = if (!displayName.isNullOrBlank()) displayName else sourceFile.name
+    val rawName = if (!displayName.isNullOrBlank()) displayName.trim() else sourceFile.name
+    val sourceExt = sourceFile.extension
 
-    // Copy to app cache shared_documents with the exact target file name so receiving apps preserve it
+    // Make sure extension is properly preserved
+    val finalName = if (!rawName.contains('.') && sourceExt.isNotBlank()) {
+        "$rawName.$sourceExt"
+    } else if (!rawName.contains('.')) {
+        val fallbackExt = when (fileType) {
+            FileType.PDF -> "pdf"
+            FileType.IMAGE -> "jpg"
+            FileType.DOCX -> "docx"
+            FileType.TEXT -> "txt"
+            FileType.ARCHIVE -> "zip"
+            FileType.VIDEO -> "mp4"
+            FileType.AUDIO -> "mp3"
+            else -> ""
+        }
+        if (fallbackExt.isNotBlank()) "$rawName.$fallbackExt" else rawName
+    } else {
+        rawName
+    }
+
+    // Clean staging folder in cache to prevent stale files with old names
     val shareDir = File(context.cacheDir, "shared_documents").apply { mkdirs() }
-    val shareFile = File(shareDir, targetName)
+    val shareFile = File(shareDir, finalName)
 
     try {
         FileInputStream(sourceFile).use { input ->
             FileOutputStream(shareFile).use { output ->
                 input.copyTo(output)
+                output.flush()
             }
         }
     } catch (_: Exception) {
@@ -65,14 +97,18 @@ fun shareDocument(
         FileType.AUDIO -> "audio/*"
         FileType.TEXT -> "text/*"
         FileType.ARCHIVE -> "application/zip"
-        else -> "*/*"
+        else -> {
+            val ext = finalName.substringAfterLast('.', "").lowercase()
+            MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "*/*"
+        }
     }
 
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = mimeType
         putExtra(Intent.EXTRA_STREAM, contentUri)
-        putExtra(Intent.EXTRA_TITLE, targetName)
-        putExtra(Intent.EXTRA_SUBJECT, targetName)
+        putExtra(Intent.EXTRA_TITLE, finalName)
+        putExtra(Intent.EXTRA_SUBJECT, finalName)
+        clipData = ClipData.newUri(context.contentResolver, finalName, contentUri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     val chooser = Intent.createChooser(intent, "Share via").apply {

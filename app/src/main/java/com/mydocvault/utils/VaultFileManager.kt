@@ -71,13 +71,27 @@ class VaultFileManager(
             File(baseDir, folderRelativePath).apply { mkdirs() }
         }
 
-        val sanitizedName = displayName.trim().ifBlank { "Document_${System.currentTimeMillis()}" }
-        var target = File(targetDir, sanitizedName)
+        var cleanName = displayName.trim().ifBlank { "Document" }
+        val dotIndex = cleanName.lastIndexOf('.')
+        val baseName = if (dotIndex > 0) cleanName.substring(0, dotIndex) else cleanName
+        var ext = if (dotIndex > 0) cleanName.substring(dotIndex) else ""
+        
+        if (ext.isBlank()) {
+            val mime = context.contentResolver.getType(uri)
+            val detectedExt = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mime)
+            if (!detectedExt.isNullOrBlank()) {
+                ext = ".$detectedExt"
+                cleanName = "$baseName$ext"
+            }
+        }
+
+        var target = File(targetDir, cleanName)
         if (target.exists()) {
-            val dotIndex = sanitizedName.lastIndexOf('.')
-            val baseName = if (dotIndex > 0) sanitizedName.substring(0, dotIndex) else sanitizedName
-            val ext = if (dotIndex > 0) sanitizedName.substring(dotIndex) else ""
-            target = File(targetDir, "${baseName}_${System.currentTimeMillis()}$ext")
+            var counter = 1
+            while (target.exists()) {
+                target = File(targetDir, "$baseName ($counter)$ext")
+                counter++
+            }
         }
         target.parentFile?.mkdirs()
         context.contentResolver.openInputStream(uri)?.use { input ->
@@ -89,6 +103,77 @@ class VaultFileManager(
         } catch (_: Exception) {}
 
         target.absolutePath
+    }
+
+    suspend fun renameDocument(currentPath: String, newName: String): String = withContext(Dispatchers.IO) {
+        val sourceFile = File(currentPath)
+        if (!sourceFile.exists()) return@withContext currentPath
+        val parentDir = sourceFile.parentFile ?: return@withContext currentPath
+
+        val sourceExt = sourceFile.extension
+        val cleanName = newName.trim()
+        val targetName = if (!cleanName.contains('.') && sourceExt.isNotBlank()) {
+            "$cleanName.$sourceExt"
+        } else {
+            cleanName
+        }
+
+        var targetFile = File(parentDir, targetName)
+        if (targetFile.absolutePath == sourceFile.absolutePath) return@withContext currentPath
+
+        if (targetFile.exists()) {
+            val dot = targetName.lastIndexOf('.')
+            val base = if (dot > 0) targetName.substring(0, dot) else targetName
+            val ext = if (dot > 0) targetName.substring(dot) else ""
+            var counter = 1
+            while (targetFile.exists()) {
+                targetFile = File(parentDir, "$base ($counter)$ext")
+                counter++
+            }
+        }
+
+        if (sourceFile.renameTo(targetFile)) {
+            try {
+                MediaScannerConnection.scanFile(context, arrayOf(sourceFile.absolutePath, targetFile.absolutePath), null, null)
+            } catch (_: Exception) {}
+            targetFile.absolutePath
+        } else {
+            try {
+                sourceFile.inputStream().use { input ->
+                    targetFile.outputStream().use { output ->
+                        input.copyTo(output)
+                        output.flush()
+                    }
+                }
+                sourceFile.delete()
+                try {
+                    MediaScannerConnection.scanFile(context, arrayOf(sourceFile.absolutePath, targetFile.absolutePath), null, null)
+                } catch (_: Exception) {}
+                targetFile.absolutePath
+            } catch (_: Exception) {
+                currentPath
+            }
+        }
+    }
+
+    suspend fun renameFolder(oldRelativePath: String, newRelativePath: String) = withContext(Dispatchers.IO) {
+        val dirs = listOf(
+            resolveStorageDir(UserPreferences.STORAGE_DOCUMENTS),
+            resolveStorageDir(UserPreferences.STORAGE_DOWNLOADS),
+            resolveStorageDir(UserPreferences.STORAGE_INTERNAL)
+        )
+        dirs.forEach { base ->
+            val oldFolder = File(base, oldRelativePath)
+            val newFolder = File(base, newRelativePath)
+            if (oldFolder.exists()) {
+                newFolder.parentFile?.mkdirs()
+                if (oldFolder.renameTo(newFolder)) {
+                    try {
+                        MediaScannerConnection.scanFile(context, arrayOf(oldFolder.absolutePath, newFolder.absolutePath), null, null)
+                    } catch (_: Exception) {}
+                }
+            }
+        }
     }
 
     suspend fun replaceDocument(path: String, uri: Uri) = withContext(Dispatchers.IO) {
@@ -140,7 +225,11 @@ class VaultFileManager(
             val dotIndex = sourceFile.name.lastIndexOf('.')
             val baseName = if (dotIndex > 0) sourceFile.name.substring(0, dotIndex) else sourceFile.name
             val ext = if (dotIndex > 0) sourceFile.name.substring(dotIndex) else ""
-            targetFile = File(targetDir, "${baseName}_${System.currentTimeMillis()}$ext")
+            var counter = 1
+            while (targetFile.exists()) {
+                targetFile = File(targetDir, "$baseName ($counter)$ext")
+                counter++
+            }
         }
         if (sourceFile.renameTo(targetFile)) {
             try {
