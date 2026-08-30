@@ -131,6 +131,8 @@ class VaultRepositoryImpl @Inject constructor(
 
     override suspend fun moveDocument(documentId: Long, newFolderId: Long?) {
         val doc = documentDao.getDocumentById(documentId) ?: return
-        documentDao.update(doc.copy(folderId = newFolderId, updatedAt = System.currentTimeMillis()))
+        val newFolderPath = getFolderRelativePath(newFolderId)
+        val newFilePath = fileManager.moveDocument(doc.filePath, newFolderPath.ifBlank { null })
+        documentDao.update(doc.copy(folderId = newFolderId, filePath = newFilePath, updatedAt = System.currentTimeMillis()))
     }
 }

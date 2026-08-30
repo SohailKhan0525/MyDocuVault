@@ -1,6 +1,7 @@
 package com.mydocvault.utils
 
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
 import com.mydocvault.data.preferences.UserPreferences
@@ -52,6 +53,9 @@ class VaultFileManager(
         val baseDir = getBaseStorageDir()
         val folderDir = if (folderRelativePath.isBlank()) baseDir else File(baseDir, folderRelativePath)
         folderDir.mkdirs()
+        try {
+            MediaScannerConnection.scanFile(context, arrayOf(folderDir.absolutePath), null, null)
+        } catch (_: Exception) {}
         folderDir
     }
 
@@ -79,6 +83,11 @@ class VaultFileManager(
         context.contentResolver.openInputStream(uri)?.use { input ->
             writeStream(input, target)
         } ?: error("Unable to open input stream")
+        
+        try {
+            MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
+        } catch (_: Exception) {}
+
         target.absolutePath
     }
 
@@ -88,12 +97,18 @@ class VaultFileManager(
         context.contentResolver.openInputStream(uri)?.use { input ->
             writeStream(input, target)
         } ?: error("Unable to open input stream")
+        try {
+            MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
+        } catch (_: Exception) {}
     }
 
     fun deleteDocument(path: String) {
         val target = File(path)
         if (target.exists()) {
             target.delete()
+            try {
+                MediaScannerConnection.scanFile(context, arrayOf(path), null, null)
+            } catch (_: Exception) {}
         }
     }
 
@@ -107,6 +122,46 @@ class VaultFileManager(
             val target = File(base, folderRelativePath)
             if (target.exists()) {
                 target.deleteRecursively()
+                try {
+                    MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    suspend fun moveDocument(currentPath: String, newFolderRelativePath: String?): String = withContext(Dispatchers.IO) {
+        val sourceFile = File(currentPath)
+        if (!sourceFile.exists()) return@withContext currentPath
+        val baseDir = getBaseStorageDir()
+        val targetDir = if (newFolderRelativePath.isNullOrBlank()) baseDir else File(baseDir, newFolderRelativePath)
+        targetDir.mkdirs()
+        var targetFile = File(targetDir, sourceFile.name)
+        if (targetFile.exists() && targetFile.absolutePath != sourceFile.absolutePath) {
+            val dotIndex = sourceFile.name.lastIndexOf('.')
+            val baseName = if (dotIndex > 0) sourceFile.name.substring(0, dotIndex) else sourceFile.name
+            val ext = if (dotIndex > 0) sourceFile.name.substring(dotIndex) else ""
+            targetFile = File(targetDir, "${baseName}_${System.currentTimeMillis()}$ext")
+        }
+        if (sourceFile.renameTo(targetFile)) {
+            try {
+                MediaScannerConnection.scanFile(context, arrayOf(sourceFile.absolutePath, targetFile.absolutePath), null, null)
+            } catch (_: Exception) {}
+            targetFile.absolutePath
+        } else {
+            try {
+                sourceFile.inputStream().use { input ->
+                    targetFile.outputStream().use { output ->
+                        input.copyTo(output)
+                        output.flush()
+                    }
+                }
+                sourceFile.delete()
+                try {
+                    MediaScannerConnection.scanFile(context, arrayOf(sourceFile.absolutePath, targetFile.absolutePath), null, null)
+                } catch (_: Exception) {}
+                targetFile.absolutePath
+            } catch (_: Exception) {
+                currentPath
             }
         }
     }
@@ -114,6 +169,7 @@ class VaultFileManager(
     private fun writeStream(input: InputStream, target: File) {
         FileOutputStream(target).use { output ->
             input.copyTo(output)
+            output.flush()
         }
     }
 }

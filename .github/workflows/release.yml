@@ -83,10 +83,11 @@ jobs:
             ## MyDocuVault v${{ steps.version.outputs.version_name }}
 
             ### What's New in v${{ steps.version.outputs.version_name }}
+            - 📁 **Disk Folder & File Sync**: Files saved or moved inside folders are now instantly written to disk and scanned via MediaScanner so they immediately show up in file explorer apps
+            - 📂 **Full Storage Permissions**: Added Scoped Storage and legacy external storage permissions for reliable document saving
             - 🔍 **Full Vault Search**: Fast real-time search across all folders and documents by name, notes, and type (PDF, Images, Word/Docs)
             - 📲 **Open with MyDocu**: Open files directly from WhatsApp, Telegram, emails, and file managers with one-tap import to chosen vault folders
-            - 📁 **Customizable Storage Location**: Choose where your files are stored (Documents, Downloads, or Private App Storage) with real disk folder creation
-            - 🔄 **100% Backward Compatible**: Existing vault documents and data remain completely intact and accessible
+            - 🚀 **In-App Update Prompt**: Automatic update prompt on HomeScreen and improved update checker headers
             - 📤 **Preserved File Names on Sharing**: Fixed file sharing to preserve original file names when sending via WhatsApp and other apps
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
 
