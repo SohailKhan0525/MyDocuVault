@@ -101,9 +101,16 @@ fun HomeScreen(
     val searchedFolders by viewModel.searchedFolders.collectAsState()
     val searchedDocuments by viewModel.searchedDocuments.collectAsState()
 
+    val updateInfo by viewModel.updateInfo.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
+
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     var isSearchActive by remember { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.checkForUpdate(context)
+    }
 
     var showSheet by remember { mutableStateOf(false) }
     var renameFolderTarget by remember { mutableStateOf<Long?>(null) }
@@ -550,6 +557,52 @@ fun HomeScreen(
                 deleteDocTarget = null
             },
             onDismiss = { deleteDocTarget = null }
+        )
+    }
+
+    if (updateInfo != null) {
+        val info = updateInfo!!
+        val isDownloading = downloadProgress != null
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.dismissUpdateDialog() },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("Update Available — ${info.versionName}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = info.notes.ifBlank { "A new version of MyDocuVault is available." },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (isDownloading) {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { (downloadProgress ?: 0) / 100f },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = "Downloading… ${downloadProgress}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(
+                    onClick = { viewModel.downloadAndInstall(context, info.apkUrl) },
+                    enabled = !isDownloading,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Download & Install")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { viewModel.dismissUpdateDialog() },
+                    enabled = !isDownloading
+                ) {
+                    Text("Later")
+                }
+            }
         )
     }
 }

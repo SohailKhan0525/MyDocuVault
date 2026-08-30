@@ -26,7 +26,11 @@ class UpdateChecker @Inject constructor(
         try {
             val currentVersion = getAppVersionName(context)
             val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
-            val request = Request.Builder().url(url).build()
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "MyDocuVault-App")
+                .header("Accept", "application/vnd.github.v3+json")
+                .build()
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext null
                 val body = response.body?.string() ?: return@withContext null
@@ -67,7 +71,10 @@ class UpdateChecker @Inject constructor(
         apkUrl: String,
         onProgress: (Int) -> Unit
     ): File = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url(apkUrl).build()
+        val request = Request.Builder()
+            .url(apkUrl)
+            .header("User-Agent", "MyDocuVault-App")
+            .build()
         val file = File(context.getExternalFilesDir(null), "mydocvault_update.apk")
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("Download failed")

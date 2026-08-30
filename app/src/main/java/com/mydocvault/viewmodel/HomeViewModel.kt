@@ -1,10 +1,13 @@
 package com.mydocvault.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mydocvault.data.entity.DocumentEntity
 import com.mydocvault.data.entity.FolderEntity
 import com.mydocvault.data.repository.VaultRepository
+import com.mydocvault.utils.UpdateChecker
+import com.mydocvault.utils.UpdateInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +25,8 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: VaultRepository
+    private val repository: VaultRepository,
+    private val updateChecker: UpdateChecker
 ) : ViewModel() {
     val folders: StateFlow<List<FolderEntity>> = repository.foldersByParent(null)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -35,6 +39,40 @@ class HomeViewModel @Inject constructor(
 
     private val _selectedFilter = MutableStateFlow("ALL") // ALL, FOLDERS, IMAGES, PDFS, DOCS
     val selectedFilter: StateFlow<String> = _selectedFilter.asStateFlow()
+
+    private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
+    val updateInfo: StateFlow<UpdateInfo?> = _updateInfo.asStateFlow()
+
+    private val _downloadProgress = MutableStateFlow<Int?>(null)
+    val downloadProgress: StateFlow<Int?> = _downloadProgress.asStateFlow()
+
+    fun checkForUpdate(context: Context) {
+        viewModelScope.launch {
+            try {
+                val info = updateChecker.checkForUpdate(context, "SohailKhan0525", "MyDocuVault")
+                _updateInfo.value = info
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun downloadAndInstall(context: Context, apkUrl: String) {
+        viewModelScope.launch {
+            try {
+                _downloadProgress.value = 0
+                val file = updateChecker.downloadApk(context, apkUrl) { percent ->
+                    _downloadProgress.value = percent
+                }
+                updateChecker.startInstall(context, file)
+            } catch (_: Exception) {
+            } finally {
+                _downloadProgress.value = null
+            }
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        _updateInfo.value = null
+    }
 
     val searchedFolders: StateFlow<List<FolderEntity>> = _searchQuery
         .flatMapLatest { query ->
