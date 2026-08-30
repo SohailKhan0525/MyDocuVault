@@ -1,5 +1,6 @@
 package com.mydocvault.ui.components
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,16 +38,35 @@ fun ZoomableImage(path: String) {
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = {
+                        if (scale > 1f) {
+                            scale = 1f
+                            offsetX = 0f
+                            offsetY = 0f
+                        } else {
+                            scale = 2.5f
+                        }
+                    }
+                )
+            }
+            .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(1f, 4f)
-                    offsetX += pan.x
-                    offsetY += pan.y
+                    val newScale = (scale * zoom).coerceIn(1f, 5f)
+                    scale = newScale
+                    if (newScale > 1f) {
+                        offsetX += pan.x
+                        offsetY += pan.y
+                    } else {
+                        offsetX = 0f
+                        offsetY = 0f
+                    }
                 }
             },
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
-            model = File(path),
+            model = if (path.startsWith("content://") || path.startsWith("file://")) android.net.Uri.parse(path) else File(path),
             contentDescription = null,
             contentScale = ContentScale.Fit,
             onState = { painterState = it },

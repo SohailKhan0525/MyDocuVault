@@ -83,11 +83,12 @@ jobs:
             ## MyDocuVault v${{ steps.version.outputs.version_name }}
 
             ### What's New in v${{ steps.version.outputs.version_name }}
+            - ⚡ **Direct "Open with MyDocu" (No PIN & No Auto-Save)**: Selecting "Open with MyDocu" in WhatsApp, Telegram, or Files opens documents directly in the viewer with zero PIN prompt and without force-saving; users can optionally save to vault or share from the top app bar / 3-dots menu
+            - 🎯 **Enhanced Responsiveness & Gestures**: Added double-tap to zoom, smoother image panning/pinching, instant loading, and streamlined rendering
             - 🏷️ **Preserved Exact File Names**: Fixed file name changing issues across imports, disk storage, renaming, and sharing with clean duplicate handling (`file (1).pdf` instead of timestamps)
             - 📁 **Disk Folder & File Sync**: Files saved or moved inside folders are now instantly written to disk and scanned via MediaScanner so they immediately show up in file explorer apps
             - 📂 **Full Storage Permissions**: Added Scoped Storage and legacy external storage permissions for reliable document saving
             - 🔍 **Full Vault Search**: Fast real-time search across all folders and documents by name, notes, and type (PDF, Images, Word/Docs)
-            - 📲 **Open with MyDocu**: Open files directly from WhatsApp, Telegram, emails, and file managers with one-tap import to chosen vault folders
             - 🚀 **In-App Update Prompt**: Automatic update prompt on HomeScreen and improved update checker headers
             - 📤 **Preserved File Names on Sharing**: Fixed file sharing to preserve original file names when sending via WhatsApp and other apps
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
