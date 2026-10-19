@@ -513,11 +513,11 @@ fun HomeScreen(
                 )
                 BottomSheetItem(
                     icon = Icons.Default.FileOpen,
-                    title = "Import document",
-                    subtitle = "PDF, DOCX",
+                    title = "Import any file",
+                    subtitle = "Excel, PowerPoint, PDF, images, archives and more",
                     onClick = {
                         showSheet = false
-                        docLauncher.launch(arrayOf("application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        docLauncher.launch(arrayOf("*/*"))
                     }
                 )
                 Spacer(modifier = Modifier.height(24.dp))
