@@ -160,7 +160,13 @@ fun PinScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 PinDots(count = 4, filled = pin.length)
                 Spacer(modifier = Modifier.height(12.dp))
-                if (error.isNotBlank()) {
+                if (pinKeyUnavailable) {
+                    Text(
+                        text = "The secure PIN key is unavailable. Use biometric unlock if it is enabled on this device.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else if (error.isNotBlank()) {
                     Text(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
@@ -251,10 +257,14 @@ fun PinScreen(
                             }
                             if (isCreate) {
                                 scope.launch {
-                                    viewModel.setPin(pin)
-                                    val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
-                                    navController.navigate(destination) {
-                                        popUpTo(NavRoutes.Pin) { inclusive = true }
+                                    try {
+                                        viewModel.setPin(pin)
+                                        val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
+                                        navController.navigate(destination) {
+                                            popUpTo(NavRoutes.Pin) { inclusive = true }
+                                        }
+                                    } catch (_: Exception) {
+                                        error = "Could not secure the PIN on this device. Please try again."
                                     }
                                 }
                             } else {
