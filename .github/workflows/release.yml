@@ -30,6 +30,14 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Validate release signing configuration
+        shell: bash
+        run: |
+          test -f "$KEYSTORE_FILE" || { echo "::error::The existing signing keystore file is missing."; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "::error::Add the KEYSTORE_PASSWORD Actions secret before creating a release."; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "::error::Add the KEY_ALIAS Actions secret before creating a release."; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "::error::Add the KEY_PASSWORD Actions secret before creating a release."; exit 1; }
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
