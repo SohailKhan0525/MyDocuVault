@@ -265,7 +265,7 @@ fun DocumentViewerScreen(
                     subtitle = "Pick a new file to replace this one",
                     onClick = {
                         showSheet = false
-                        replaceLauncher.launch(arrayOf("image/*", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        replaceLauncher.launch(arrayOf("*/*"))
                     }
                 )
                 DocSheetItem(
