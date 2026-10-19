@@ -34,6 +34,11 @@ class FolderViewModel @Inject constructor(
     val currentFolder: StateFlow<FolderEntity?> = repository.folderById(folderId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    private val _actionMessage = MutableStateFlow<String?>(null)
+    val actionMessage: StateFlow<String?> = _actionMessage.asStateFlow()
+
+    fun clearActionMessage() { _actionMessage.value = null }
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -102,7 +107,11 @@ class FolderViewModel @Inject constructor(
 
     fun importDocument(uri: android.net.Uri, name: String, type: String) {
         viewModelScope.launch {
-            repository.importDocument(uri, name, folderId, type)
+            try {
+                repository.importDocument(uri, name, folderId, type)
+            } catch (_: Exception) {
+                _actionMessage.value = "Could not import " + name.take(80) + ". Check file access and available storage."
+            }
         }
     }
 }
