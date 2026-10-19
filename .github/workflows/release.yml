@@ -13,11 +13,8 @@ jobs:
     permissions:
       contents: write
     env:
-      # Keep the existing signing keystore file; put its credentials in Actions secrets.
+      # Use the existing keystore and the same signing defaults as earlier releases.
       KEYSTORE_FILE: app/keystore/mydocvault.keystore
-      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
     steps:
       - name: Checkout code
@@ -30,13 +27,10 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Validate release signing configuration
+      - name: Validate existing keystore
         shell: bash
         run: |
           test -f "$KEYSTORE_FILE" || { echo "::error::The existing signing keystore file is missing."; exit 1; }
-          test -n "$KEYSTORE_PASSWORD" || { echo "::error::Add the KEYSTORE_PASSWORD Actions secret before creating a release."; exit 1; }
-          test -n "$KEY_ALIAS" || { echo "::error::Add the KEY_ALIAS Actions secret before creating a release."; exit 1; }
-          test -n "$KEY_PASSWORD" || { echo "::error::Add the KEY_PASSWORD Actions secret before creating a release."; exit 1; }
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -99,7 +93,7 @@ jobs:
             - 📂 **Full Storage Permissions**: Added Scoped Storage and legacy external storage permissions for reliable document saving
             - 🔍 **Full Vault Search**: Fast real-time search across all folders and documents by name, notes, and type (PDF, Images, Word/Docs)
             - 🚀 **In-App Update Prompt**: Automatic update prompt on HomeScreen and improved update checker headers
-            - 📤 **Preserved File Names on Sharing**: Fixed file sharing to preserve original file names when sending via WhatsApp and other apps
+            - 📤 **Preserved File Names on Sharing**: Fixed file name preservation when sending via WhatsApp and other apps
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
 
             ### Downloads
