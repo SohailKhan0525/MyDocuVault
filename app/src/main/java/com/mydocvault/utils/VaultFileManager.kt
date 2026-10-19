@@ -273,7 +273,7 @@ class VaultFileManager(
         val safe = name
             .filterNot { it.isISOControl() }
             .replace('/', '_')
-            .replace('\\\\', '_')
+            .replace('\\', '_')
             .trim()
             .trim('.')
         return safe.ifBlank { "Document" }
