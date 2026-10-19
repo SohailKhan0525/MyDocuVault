@@ -377,7 +377,7 @@ fun FolderDetailScreen(
                     subtitle = "PDF, DOCX",
                     onClick = {
                         showSheet = false
-                        docLauncher.launch(arrayOf("application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        docLauncher.launch(arrayOf("*/*"))
                     }
                 )
                 Spacer(modifier = Modifier.height(24.dp))
