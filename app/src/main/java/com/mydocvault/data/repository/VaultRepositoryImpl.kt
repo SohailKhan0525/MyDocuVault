@@ -35,20 +35,23 @@ class VaultRepositoryImpl @Inject constructor(
 
     override suspend fun getDocument(documentId: Long): DocumentEntity? = documentDao.getDocumentById(documentId)
 
+    private fun sanitizeFolderSegment(name: String): String =
+        name.replace("[^A-Za-z0-9._ -]".toRegex(), "_").trim().trim('.').ifBlank { "Folder" }
+
     private suspend fun getFolderRelativePath(folderId: Long?): String {
         if (folderId == null || folderId == 0L) return ""
         val segments = mutableListOf<String>()
         var currentId: Long? = folderId
         while (currentId != null && currentId != 0L) {
             val folder = folderDao.getFolderById(currentId) ?: break
-            segments.add(0, folder.name.replace("[^A-Za-z0-9._ -]".toRegex(), "_"))
+            segments.add(0, sanitizeFolderSegment(folder.name))
             currentId = folder.parentFolderId
         }
         return segments.joinToString("/")
     }
 
     override suspend fun createFolder(name: String, parentId: Long?): Long {
-        val sanitizedName = name.replace("[^A-Za-z0-9._ -]".toRegex(), "_")
+        val sanitizedName = sanitizeFolderSegment(name)
         val id = folderDao.insert(FolderEntity(name = name, parentFolderId = parentId))
         val parentPath = getFolderRelativePath(parentId)
         val fullPath = if (parentPath.isEmpty()) sanitizedName else "$parentPath/$sanitizedName"
