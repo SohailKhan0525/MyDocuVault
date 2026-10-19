@@ -102,10 +102,24 @@ class ImportActivity : ComponentActivity() {
                 ext = when (mimeType) {
                     "image/jpeg" -> "jpg"
                     "image/png" -> "png"
+                    "image/webp" -> "webp"
+                    "image/gif" -> "gif"
+                    "image/tiff" -> "tif"
                     "application/pdf" -> "pdf"
                     "application/msword" -> "doc"
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> "docx"
+                    "application/vnd.ms-excel" -> "xls"
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> "xlsx"
+                    "application/vnd.ms-excel.sheet.macroEnabled.12" -> "xlsm"
+                    "application/vnd.ms-powerpoint" -> "ppt"
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> "pptx"
+                    "application/vnd.ms-powerpoint.presentation.macroEnabled.12" -> "pptm"
+                    "application/vnd.oasis.opendocument.spreadsheet" -> "ods"
+                    "application/vnd.oasis.opendocument.presentation" -> "odp"
+                    "text/csv" -> "csv"
+                    "text/markdown" -> "md"
                     "text/plain" -> "txt"
+                    "application/zip" -> "zip"
                     else -> null
                 }
             }
