@@ -40,7 +40,7 @@ class HomeViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _selectedFilter = MutableStateFlow("ALL") // ALL, FOLDERS, IMAGES, PDFS, DOCS
+    private val _selectedFilter = MutableStateFlow("ALL") // ALL, FOLDERS, IMAGES, PDFS, DOCS, SHEETS, SLIDES
     val selectedFilter: StateFlow<String> = _selectedFilter.asStateFlow()
 
     private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
@@ -138,7 +138,9 @@ class HomeViewModel @Inject constructor(
                 when (filter) {
                     "IMAGES" -> docs.filter { it.fileType == "image" }
                     "PDFS" -> docs.filter { it.fileType == "pdf" }
-                    "DOCS" -> docs.filter { it.fileType == "docx" || it.fileType == "doc" || it.fileType == "text" }
+                    "DOCS" -> docs.filter { it.fileType == "docx" || it.fileType == "doc" || it.fileType == "office" || it.fileType == "text" }
+                    "SHEETS" -> docs.filter { it.fileType == "spreadsheet" }
+                    "SLIDES" -> docs.filter { it.fileType == "presentation" }
                     else -> docs
                 }
             }
