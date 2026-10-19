@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.IOException
 
 class VaultFileManager(
     private val context: Context,
@@ -68,10 +69,10 @@ class VaultFileManager(
         val targetDir = if (folderRelativePath.isNullOrBlank()) {
             baseDir
         } else {
-            File(baseDir, folderRelativePath).apply { mkdirs() }
+            resolveSafeChild(baseDir, folderRelativePath).apply { mkdirs() }
         }
 
-        var cleanName = displayName.trim().ifBlank { "Document" }
+        var cleanName = sanitizeFileName(displayName.trim().ifBlank { "Document" })
         val dotIndex = cleanName.lastIndexOf('.')
         val baseName = if (dotIndex > 0) cleanName.substring(0, dotIndex) else cleanName
         var ext = if (dotIndex > 0) cleanName.substring(dotIndex) else ""
@@ -85,18 +86,23 @@ class VaultFileManager(
             }
         }
 
-        var target = File(targetDir, cleanName)
+        var target = resolveSafeChild(targetDir, cleanName)
         if (target.exists()) {
             var counter = 1
             while (target.exists()) {
-                target = File(targetDir, "$baseName ($counter)$ext")
+                target = resolveSafeChild(targetDir, "$baseName ($counter)$ext")
                 counter++
             }
         }
         target.parentFile?.mkdirs()
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            writeStream(input, target)
-        } ?: error("Unable to open input stream")
+        try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                writeStream(input, target)
+            } ?: throw IOException("Unable to open the selected file.")
+        } catch (exception: Exception) {
+            target.delete()
+            throw exception
+        }
         
         try {
             MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
@@ -253,6 +259,24 @@ class VaultFileManager(
                 currentPath
             }
         }
+    }
+
+    private fun resolveSafeChild(parent: File, childPath: String): File {
+        val canonicalParent = parent.canonicalFile
+        val result = File(canonicalParent, childPath).canonicalFile
+        val prefix = canonicalParent.path + File.separator
+        require(result.path.startsWith(prefix)) { "Invalid file path." }
+        return result
+    }
+
+    private fun sanitizeFileName(name: String): String {
+        val safe = name
+            .filterNot { it.isISOControl() }
+            .replace('/', '_')
+            .replace('\\\\', '_')
+            .trim()
+            .trim('.')
+        return safe.ifBlank { "Document" }
     }
 
     private fun writeStream(input: InputStream, target: File) {
