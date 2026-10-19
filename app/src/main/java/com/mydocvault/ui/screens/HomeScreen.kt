@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -41,6 +42,8 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.SnackbarHost
@@ -335,13 +338,17 @@ fun HomeScreen(
                                     val fileType = FileType.fromRaw(doc.fileType)
                                     val docIcon = when (fileType) {
                                         FileType.IMAGE -> Icons.Default.Image
-                                        FileType.PDF   -> Icons.Default.Description
-                                        else           -> Icons.Default.FileOpen
+                                        FileType.PDF -> Icons.Default.Description
+                                        FileType.SPREADSHEET -> Icons.Default.TableChart
+                                        FileType.PRESENTATION -> Icons.Default.Slideshow
+                                        else -> Icons.Default.FileOpen
                                     }
                                     val docIconColor = when (fileType) {
                                         FileType.IMAGE -> MaterialTheme.colorScheme.secondary
-                                        FileType.PDF   -> MaterialTheme.colorScheme.error
-                                        else           -> MaterialTheme.colorScheme.tertiary
+                                        FileType.PDF -> MaterialTheme.colorScheme.error
+                                        FileType.SPREADSHEET -> MaterialTheme.colorScheme.secondary
+                                        FileType.PRESENTATION -> MaterialTheme.colorScheme.tertiary
+                                        else -> MaterialTheme.colorScheme.tertiary
                                     }
                                     ItemDocCard(
                                         name = doc.name,
@@ -654,6 +661,7 @@ private fun FolderCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(
