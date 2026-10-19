@@ -164,6 +164,7 @@ fun HomeScreen(
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             if (isSearchActive) {
                 TopAppBar(
