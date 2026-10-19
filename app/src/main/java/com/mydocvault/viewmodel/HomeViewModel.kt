@@ -72,10 +72,11 @@ class HomeViewModel @Inject constructor(
             _actionMessage.value = null
             var generatedPdf: File? = null
             try {
-                generatedPdf = ImageToPdfConverter(context).convert(imageUris)
+                val createdPdf = ImageToPdfConverter(context).convert(imageUris)
+                generatedPdf = createdPdf
                 val pdfName = "Images_" + System.currentTimeMillis() + ".pdf"
                 repository.importDocument(
-                    uri = Uri.fromFile(generatedPdf),
+                    uri = Uri.fromFile(createdPdf),
                     displayName = pdfName,
                     folderId = null,
                     fileType = "pdf",
