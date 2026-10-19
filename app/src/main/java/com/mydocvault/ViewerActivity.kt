@@ -113,7 +113,7 @@ fun ExternalViewerScreen(
                 }.canonicalFile
                 val targetName = displayName
                     .substringAfterLast('/')
-                    .substringAfterLast('\\\\')
+                    .substringAfterLast('\\')
                     .filterNot { it.isISOControl() }
                     .trim()
                     .trim('.')
