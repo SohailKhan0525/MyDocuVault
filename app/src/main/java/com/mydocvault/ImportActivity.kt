@@ -93,7 +93,7 @@ class ImportActivity : ComponentActivity() {
         var name = result ?: "Unknown File"
         
         val fileType = com.mydocvault.utils.FileType.fromFileName(name)
-        if (fileType == com.mydocvault.utils.FileType.OTHER) {
+        if (fileType == com.mydocvault.utils.FileType.OTHER && name.lastIndexOf('.') <= 0) {
             val mimeType = getMimeType(uri)
             var ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
             
@@ -135,8 +135,15 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
     val selectedFolder by viewModel.selectedFolder.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
     val importComplete by viewModel.importComplete.collectAsState()
+    val importError by viewModel.importError.collectAsState()
     val lastDocId by viewModel.lastImportedDocId.collectAsState()
     val context = LocalContext.current
+
+    LaunchedEffect(importError) {
+        importError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+        }
+    }
 
     if (importComplete) {
         LaunchedEffect(Unit) {
