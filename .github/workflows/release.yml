@@ -13,10 +13,11 @@ jobs:
     permissions:
       contents: write
     env:
+      # Keep the existing signing keystore file; put its credentials in Actions secrets.
       KEYSTORE_FILE: app/keystore/mydocvault.keystore
-      KEYSTORE_PASSWORD: mydocvault2024
-      KEY_ALIAS: mydocvault
-      KEY_PASSWORD: mydocvault2024
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
     steps:
       - name: Checkout code
