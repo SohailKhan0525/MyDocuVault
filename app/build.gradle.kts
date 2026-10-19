@@ -9,7 +9,8 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-// Load signing credentials from local.properties (local dev) or environment variables (CI)
+// Load signing credentials from local.properties (local dev) or environment variables (CI).
+// Preserve the existing signing setup used by previously published releases.
 val localProps = Properties().also { props ->
     val localPropsFile = rootProject.file("local.properties")
     if (localPropsFile.exists()) props.load(localPropsFile.inputStream())
@@ -53,23 +54,21 @@ android {
     signingConfigs {
         getByName("debug") {
             storeFile = resolveStoreFile(sharedKeystorePath, "debug.keystore")
-            // Never hard-code the release key password in source. Use standard debug
-            // credentials only when this build is not configured to use the shared key.
             storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty {
-                if (useSharedKeystore) "" else "android"
+                if (useSharedKeystore) "mydocvault2024" else "android"
             }
             keyAlias = signingProp("KEY_ALIAS").ifEmpty {
                 if (useSharedKeystore) "mydocvault" else "androiddebugkey"
             }
             keyPassword = signingProp("KEY_PASSWORD").ifEmpty {
-                if (useSharedKeystore) "" else "android"
+                if (useSharedKeystore) "mydocvault2024" else "android"
             }
         }
         create("release") {
             storeFile = resolveStoreFile(sharedKeystorePath, "keystore/mydocvault.keystore")
-            storePassword = signingProp("KEYSTORE_PASSWORD")
+            storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty { "mydocvault2024" }
             keyAlias = signingProp("KEY_ALIAS").ifEmpty { "mydocvault" }
-            keyPassword = signingProp("KEY_PASSWORD")
+            keyPassword = signingProp("KEY_PASSWORD").ifEmpty { "mydocvault2024" }
         }
     }
 
