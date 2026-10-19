@@ -38,9 +38,11 @@ class ImageToPdfConverter(private val context: Context) {
         try {
             uris.forEachIndexed { index, uri ->
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                context.contentResolver.openInputStream(uri)?.use { stream ->
+                val boundsStream = context.contentResolver.openInputStream(uri)
+                    ?: throw IOException("Could not read image ${index + 1}.")
+                boundsStream.use { stream ->
                     BitmapFactory.decodeStream(stream, null, bounds)
-                } ?: throw IOException("Could not read image ${index + 1}.")
+                }
 
                 if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
                     throw IOException("File ${index + 1} is not a supported image.")
