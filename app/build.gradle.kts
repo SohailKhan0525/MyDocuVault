@@ -53,21 +53,23 @@ android {
     signingConfigs {
         getByName("debug") {
             storeFile = resolveStoreFile(sharedKeystorePath, "debug.keystore")
+            // Never hard-code the release key password in source. Use standard debug
+            // credentials only when this build is not configured to use the shared key.
             storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty {
-                if (useSharedKeystore) "mydocvault2024" else "android"
+                if (useSharedKeystore) "" else "android"
             }
             keyAlias = signingProp("KEY_ALIAS").ifEmpty {
                 if (useSharedKeystore) "mydocvault" else "androiddebugkey"
             }
             keyPassword = signingProp("KEY_PASSWORD").ifEmpty {
-                if (useSharedKeystore) "mydocvault2024" else "android"
+                if (useSharedKeystore) "" else "android"
             }
         }
         create("release") {
             storeFile = resolveStoreFile(sharedKeystorePath, "keystore/mydocvault.keystore")
-            storePassword = signingProp("KEYSTORE_PASSWORD").ifEmpty { "mydocvault2024" }
+            storePassword = signingProp("KEYSTORE_PASSWORD")
             keyAlias = signingProp("KEY_ALIAS").ifEmpty { "mydocvault" }
-            keyPassword = signingProp("KEY_PASSWORD").ifEmpty { "mydocvault2024" }
+            keyPassword = signingProp("KEY_PASSWORD")
         }
     }
 
