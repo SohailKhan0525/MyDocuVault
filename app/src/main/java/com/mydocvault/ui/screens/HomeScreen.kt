@@ -269,7 +269,9 @@ fun HomeScreen(
                         "FOLDERS" to "Folders",
                         "IMAGES" to "Images",
                         "PDFS" to "PDFs",
-                        "DOCS" to "Word / Docs"
+                        "DOCS" to "Word / Docs",
+                        "SHEETS" to "Spreadsheets",
+                        "SLIDES" to "Presentations"
                     )
                     items(filters) { (key, label) ->
                         FilterChip(
