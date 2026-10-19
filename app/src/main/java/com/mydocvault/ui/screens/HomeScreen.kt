@@ -457,13 +457,17 @@ fun HomeScreen(
                                     val fileType = FileType.fromRaw(doc.fileType)
                                     val docIcon = when (fileType) {
                                         FileType.IMAGE -> Icons.Default.Image
-                                        FileType.PDF   -> Icons.Default.Description
-                                        else           -> Icons.Default.FileOpen
+                                        FileType.PDF -> Icons.Default.Description
+                                        FileType.SPREADSHEET -> Icons.Default.TableChart
+                                        FileType.PRESENTATION -> Icons.Default.Slideshow
+                                        else -> Icons.Default.FileOpen
                                     }
                                     val docIconColor = when (fileType) {
                                         FileType.IMAGE -> MaterialTheme.colorScheme.secondary
-                                        FileType.PDF   -> MaterialTheme.colorScheme.error
-                                        else           -> MaterialTheme.colorScheme.tertiary
+                                        FileType.PDF -> MaterialTheme.colorScheme.error
+                                        FileType.SPREADSHEET -> MaterialTheme.colorScheme.secondary
+                                        FileType.PRESENTATION -> MaterialTheme.colorScheme.tertiary
+                                        else -> MaterialTheme.colorScheme.tertiary
                                     }
                                     ItemDocCard(
                                         name = doc.name,
@@ -714,6 +718,7 @@ private fun ItemDocCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(
