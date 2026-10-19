@@ -33,7 +33,7 @@ class UserPreferences @Inject constructor(
     }
 
     val storageLocationFlow: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[storageLocationKey] ?: STORAGE_DOCUMENTS
+        prefs[storageLocationKey] ?: STORAGE_INTERNAL
     }
 
     // Legacy plaintext PINs are read temporarily so existing installs can migrate in-place.
