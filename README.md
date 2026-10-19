@@ -169,7 +169,7 @@ sdk.dir=/workspaces/MyDocuVault/android-sdk
 
 The GitHub Actions release workflow automatically builds and attaches the APK to each GitHub Release when changes are pushed to `main`.
 
-**Release signing setup:** the existing signing file `app/keystore/mydocvault.keystore` is retained so future builds can keep the same app-signing identity. Configure these repository **Actions secrets** before running a release: `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. The release workflow validates that the key file and secrets are present and never writes the signing passwords into workflow source. Do not regenerate or replace the keystore for routine updates.
+**Release signing setup:** the existing signing file `app/keystore/mydocvault.keystore` and the signing defaults used by previous releases are retained. The release workflow uses that same file and does not require you to create new GitHub Actions secrets. Do not regenerate, replace, delete, or move the keystore for routine updates. Keep a separate offline copy of the keystore somewhere safe.
 
 ---
 
