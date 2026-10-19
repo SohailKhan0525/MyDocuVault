@@ -14,6 +14,12 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val prefs: UserPreferences
 ) : ViewModel() {
+    init {
+        viewModelScope.launch {
+            runCatching { prefs.migrateLegacyPinIfNeeded() }
+        }
+    }
+
     val pinState: StateFlow<String?> = prefs.pinFlow.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),

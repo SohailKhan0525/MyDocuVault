@@ -8,6 +8,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipEntry
@@ -31,6 +32,8 @@ class BackupManager @Inject constructor(
         private const val BACKUP_DIR_NAME = "MyDocuVaultBackup"
         private const val BACKUP_FILE_PREFIX = "MyDocuVault_backup_"
         private const val BACKUP_FILE_SUFFIX = ".zip"
+        private const val MAX_RESTORE_ENTRIES = 50_000
+        private const val MAX_RESTORE_BYTES = 2L * 1024 * 1024 * 1024
     }
 
     private val docsDir: File get() = File(context.filesDir, "documents")
@@ -94,19 +97,46 @@ class BackupManager @Inject constructor(
             tempDir.mkdirs()
 
             // Extract zip to temp dir
+            var extractedBytes = 0L
+            var extractedEntries = 0
+            val canonicalTempRoot = tempDir.canonicalFile
             ZipInputStream(FileInputStream(zipFile).buffered()).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {
-                    val outFile = File(tempDir, entry.name)
+                    extractedEntries++
+                    if (extractedEntries > MAX_RESTORE_ENTRIES) {
+                        throw IOException("Backup contains too many entries.")
+                    }
+
+                    val outFile = File(canonicalTempRoot, entry.name).canonicalFile
+                    val rootPrefix = canonicalTempRoot.path + File.separator
+                    if (outFile.path != canonicalTempRoot.path && !outFile.path.startsWith(rootPrefix)) {
+                        throw IOException("Backup contains an unsafe file path.")
+                    }
+
                     if (entry.isDirectory) {
-                        outFile.mkdirs()
+                        if (!outFile.exists() && !outFile.mkdirs()) {
+                            throw IOException("Could not prepare restore directory.")
+                        }
                     } else {
-                        outFile.parentFile?.mkdirs()
-                        FileOutputStream(outFile).use { out -> copyStream(zis, out) }
+                        outFile.parentFile?.let { parent ->
+                            if (!parent.exists() && !parent.mkdirs()) {
+                                throw IOException("Could not prepare restore directory.")
+                            }
+                        }
+                        val remaining = MAX_RESTORE_BYTES - extractedBytes
+                        if (remaining <= 0L) throw IOException("Backup exceeds the restore size limit.")
+                        extractedBytes += FileOutputStream(outFile).use { out ->
+                            copyStream(zis, out, remaining)
+                        }
                     }
                     zis.closeEntry()
                     entry = zis.nextEntry
                 }
+            }
+
+            if (!File(tempDir, DB_ENTRY).isFile) {
+                throw IOException("This file is not a valid MyDocuVault backup.")
             }
 
             // Restore documents
@@ -169,11 +199,16 @@ class BackupManager @Inject constructor(
         src.copyTo(dest, overwrite = true)
     }
 
-    private fun copyStream(input: InputStream, output: FileOutputStream) {
+    private fun copyStream(input: InputStream, output: java.io.OutputStream, maxBytes: Long): Long {
         val buffer = ByteArray(8192)
-        var bytesRead: Int
-        while (input.read(buffer).also { bytesRead = it } != -1) {
+        var total = 0L
+        while (true) {
+            val bytesRead = input.read(buffer)
+            if (bytesRead == -1) break
+            total += bytesRead
+            if (total > maxBytes) throw IOException("Backup exceeds the restore size limit.")
             output.write(buffer, 0, bytesRead)
         }
+        return total
     }
 }

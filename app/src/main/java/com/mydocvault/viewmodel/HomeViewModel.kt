@@ -1,11 +1,13 @@
 package com.mydocvault.viewmodel
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mydocvault.data.entity.DocumentEntity
 import com.mydocvault.data.entity.FolderEntity
 import com.mydocvault.data.repository.VaultRepository
+import com.mydocvault.utils.ImageToPdfConverter
 import com.mydocvault.utils.UpdateChecker
 import com.mydocvault.utils.UpdateInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -37,7 +40,7 @@ class HomeViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _selectedFilter = MutableStateFlow("ALL") // ALL, FOLDERS, IMAGES, PDFS, DOCS
+    private val _selectedFilter = MutableStateFlow("ALL") // ALL, FOLDERS, IMAGES, PDFS, DOCS, SHEETS, SLIDES
     val selectedFilter: StateFlow<String> = _selectedFilter.asStateFlow()
 
     private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
@@ -45,6 +48,50 @@ class HomeViewModel @Inject constructor(
 
     private val _downloadProgress = MutableStateFlow<Int?>(null)
     val downloadProgress: StateFlow<Int?> = _downloadProgress.asStateFlow()
+
+    private val _isCreatingPdf = MutableStateFlow(false)
+    val isCreatingPdf: StateFlow<Boolean> = _isCreatingPdf.asStateFlow()
+
+    private val _actionMessage = MutableStateFlow<String?>(null)
+    val actionMessage: StateFlow<String?> = _actionMessage.asStateFlow()
+
+    fun clearActionMessage() {
+        _actionMessage.value = null
+    }
+
+    fun createPdfFromImages(context: Context, imageUris: List<Uri>) {
+        if (imageUris.isEmpty()) return
+        if (imageUris.size > ImageToPdfConverter.MAX_IMAGES) {
+            _actionMessage.value = "Choose up to 100 images per PDF."
+            return
+        }
+        if (_isCreatingPdf.value) return
+
+        viewModelScope.launch {
+            _isCreatingPdf.value = true
+            _actionMessage.value = null
+            var generatedPdf: File? = null
+            try {
+                val createdPdf = ImageToPdfConverter(context).convert(imageUris)
+                generatedPdf = createdPdf
+                val pdfName = "Images_" + System.currentTimeMillis() + ".pdf"
+                repository.importDocument(
+                    uri = Uri.fromFile(createdPdf),
+                    displayName = pdfName,
+                    folderId = null,
+                    fileType = "pdf",
+                    notes = "Created from " + imageUris.size + " images"
+                )
+                _actionMessage.value = "PDF created from " + imageUris.size + " images and saved to your vault."
+            } catch (exception: Exception) {
+                _actionMessage.value = exception.message?.take(180)
+                    ?: "Could not create the PDF. Check the selected files and available storage."
+            } finally {
+                generatedPdf?.delete()
+                _isCreatingPdf.value = false
+            }
+        }
+    }
 
     fun checkForUpdate(context: Context) {
         viewModelScope.launch {
@@ -91,7 +138,9 @@ class HomeViewModel @Inject constructor(
                 when (filter) {
                     "IMAGES" -> docs.filter { it.fileType == "image" }
                     "PDFS" -> docs.filter { it.fileType == "pdf" }
-                    "DOCS" -> docs.filter { it.fileType == "docx" || it.fileType == "doc" || it.fileType == "text" }
+                    "DOCS" -> docs.filter { it.fileType == "docx" || it.fileType == "doc" || it.fileType == "office" || it.fileType == "text" }
+                    "SHEETS" -> docs.filter { it.fileType == "spreadsheet" }
+                    "SLIDES" -> docs.filter { it.fileType == "presentation" }
                     else -> docs
                 }
             }
@@ -143,7 +192,12 @@ class HomeViewModel @Inject constructor(
 
     fun importDocument(uri: android.net.Uri, name: String, type: String) {
         viewModelScope.launch {
-            repository.importDocument(uri, name, null, type)
+            try {
+                repository.importDocument(uri, name, null, type)
+            } catch (exception: Exception) {
+                _actionMessage.value = "Could not import " + name.take(80) + ": " +
+                    (exception.message?.take(100) ?: "file access failed")
+            }
         }
     }
 }

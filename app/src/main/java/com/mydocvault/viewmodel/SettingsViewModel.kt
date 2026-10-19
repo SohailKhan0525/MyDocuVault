@@ -31,7 +31,7 @@ class SettingsViewModel @Inject constructor(
     val storageLocation: StateFlow<String> = prefs.storageLocationFlow.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
-        UserPreferences.STORAGE_DOCUMENTS
+        UserPreferences.STORAGE_INTERNAL
     )
 
     fun setStorageLocation(location: String) {

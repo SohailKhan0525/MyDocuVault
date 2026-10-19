@@ -13,10 +13,8 @@ jobs:
     permissions:
       contents: write
     env:
+      # Use the existing keystore and the same signing defaults as earlier releases.
       KEYSTORE_FILE: app/keystore/mydocvault.keystore
-      KEYSTORE_PASSWORD: mydocvault2024
-      KEY_ALIAS: mydocvault
-      KEY_PASSWORD: mydocvault2024
 
     steps:
       - name: Checkout code
@@ -28,6 +26,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
+
+      - name: Validate existing keystore
+        shell: bash
+        run: |
+          test -f "$KEYSTORE_FILE" || { echo "::error::The existing signing keystore file is missing."; exit 1; }
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -90,7 +93,7 @@ jobs:
             - 📂 **Full Storage Permissions**: Added Scoped Storage and legacy external storage permissions for reliable document saving
             - 🔍 **Full Vault Search**: Fast real-time search across all folders and documents by name, notes, and type (PDF, Images, Word/Docs)
             - 🚀 **In-App Update Prompt**: Automatic update prompt on HomeScreen and improved update checker headers
-            - 📤 **Preserved File Names on Sharing**: Fixed file sharing to preserve original file names when sending via WhatsApp and other apps
+            - 📤 **Preserved File Names on Sharing**: Fixed file name preservation when sending via WhatsApp and other apps
             - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
 
             ### Downloads

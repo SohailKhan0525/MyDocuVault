@@ -5,9 +5,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,10 +41,16 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -71,6 +80,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -85,6 +95,7 @@ import com.mydocvault.ui.components.EmptyState
 import com.mydocvault.ui.components.RenameDialog
 import com.mydocvault.ui.navigation.NavRoutes
 import com.mydocvault.utils.FileType
+import com.mydocvault.utils.ImageToPdfConverter
 import com.mydocvault.utils.getDocumentDisplayName
 import com.mydocvault.viewmodel.HomeViewModel
 
@@ -106,7 +117,18 @@ fun HomeScreen(
 
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val isCreatingPdf by viewModel.isCreatingPdf.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(actionMessage) {
+        val message = actionMessage
+        if (!message.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearActionMessage()
+        }
+    }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.checkForUpdate(context)
@@ -130,6 +152,13 @@ fun HomeScreen(
         }
     )
 
+    val imageToPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments(),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) viewModel.createPdfFromImages(context, uris)
+        }
+    )
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20),
         onResult = { uris ->
@@ -142,6 +171,7 @@ fun HomeScreen(
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             if (isSearchActive) {
                 TopAppBar(
@@ -232,6 +262,17 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            AnimatedVisibility(
+                visible = !isSearchActive,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 5 }),
+                exit = fadeOut()
+            ) {
+                VaultOverviewCard(
+                    folderCount = folders.size,
+                    documentCount = rootDocuments.size
+                )
+            }
+
             if (isSearchActive) {
                 // Filter chips
                 LazyRow(
@@ -243,7 +284,9 @@ fun HomeScreen(
                         "FOLDERS" to "Folders",
                         "IMAGES" to "Images",
                         "PDFS" to "PDFs",
-                        "DOCS" to "Word / Docs"
+                        "DOCS" to "Word / Docs",
+                        "SHEETS" to "Spreadsheets",
+                        "SLIDES" to "Presentations"
                     )
                     items(filters) { (key, label) ->
                         FilterChip(
@@ -312,13 +355,17 @@ fun HomeScreen(
                                     val fileType = FileType.fromRaw(doc.fileType)
                                     val docIcon = when (fileType) {
                                         FileType.IMAGE -> Icons.Default.Image
-                                        FileType.PDF   -> Icons.Default.Description
-                                        else           -> Icons.Default.FileOpen
+                                        FileType.PDF -> Icons.Default.Description
+                                        FileType.SPREADSHEET -> Icons.Default.TableChart
+                                        FileType.PRESENTATION -> Icons.Default.Slideshow
+                                        else -> Icons.Default.FileOpen
                                     }
                                     val docIconColor = when (fileType) {
                                         FileType.IMAGE -> MaterialTheme.colorScheme.secondary
-                                        FileType.PDF   -> MaterialTheme.colorScheme.error
-                                        else           -> MaterialTheme.colorScheme.tertiary
+                                        FileType.PDF -> MaterialTheme.colorScheme.error
+                                        FileType.SPREADSHEET -> MaterialTheme.colorScheme.secondary
+                                        FileType.PRESENTATION -> MaterialTheme.colorScheme.tertiary
+                                        else -> MaterialTheme.colorScheme.tertiary
                                     }
                                     ItemDocCard(
                                         name = doc.name,
@@ -427,13 +474,17 @@ fun HomeScreen(
                                     val fileType = FileType.fromRaw(doc.fileType)
                                     val docIcon = when (fileType) {
                                         FileType.IMAGE -> Icons.Default.Image
-                                        FileType.PDF   -> Icons.Default.Description
-                                        else           -> Icons.Default.FileOpen
+                                        FileType.PDF -> Icons.Default.Description
+                                        FileType.SPREADSHEET -> Icons.Default.TableChart
+                                        FileType.PRESENTATION -> Icons.Default.Slideshow
+                                        else -> Icons.Default.FileOpen
                                     }
                                     val docIconColor = when (fileType) {
                                         FileType.IMAGE -> MaterialTheme.colorScheme.secondary
-                                        FileType.PDF   -> MaterialTheme.colorScheme.error
-                                        else           -> MaterialTheme.colorScheme.tertiary
+                                        FileType.PDF -> MaterialTheme.colorScheme.error
+                                        FileType.SPREADSHEET -> MaterialTheme.colorScheme.secondary
+                                        FileType.PRESENTATION -> MaterialTheme.colorScheme.tertiary
+                                        else -> MaterialTheme.colorScheme.tertiary
                                     }
                                     ItemDocCard(
                                         name = doc.name,
@@ -490,11 +541,22 @@ fun HomeScreen(
                 )
                 BottomSheetItem(
                     icon = Icons.Default.FileOpen,
-                    title = "Import document",
-                    subtitle = "PDF, DOCX",
+                    title = "Import any file",
+                    subtitle = "Excel, PowerPoint, PDF, images, archives and more",
                     onClick = {
                         showSheet = false
-                        docLauncher.launch(arrayOf("application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        docLauncher.launch(arrayOf("*/*"))
+                    }
+                )
+                BottomSheetItem(
+                    icon = Icons.Default.PictureAsPdf,
+                    title = if (isCreatingPdf) "Creating PDF…" else "Images to PDF",
+                    subtitle = if (isCreatingPdf) "Preparing the pages…" else "Combine up to " + ImageToPdfConverter.MAX_IMAGES + " PNG or JPEG images into one PDF",
+                    onClick = {
+                        if (!isCreatingPdf) {
+                            showSheet = false
+                            imageToPdfLauncher.launch(arrayOf("image/*"))
+                        }
                     }
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -620,6 +682,7 @@ private fun FolderCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(
@@ -672,6 +735,7 @@ private fun ItemDocCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(
@@ -756,3 +820,108 @@ private fun BottomSheetItem(
         }
     }
 }
+
+@Composable
+private fun VaultOverviewCard(
+    folderCount: Int,
+    documentCount: Int
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .animateContentSize(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.secondary,
+                            MaterialTheme.colorScheme.tertiary
+                        )
+                    )
+                )
+                .padding(horizontal = 22.dp, vertical = 22.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f),
+                        modifier = Modifier.size(42.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(21.dp)
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "MY PRIVATE VAULT",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                        )
+                        Text(
+                            text = "Your space, in order.",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+                Text(
+                    text = "One calm place for every important file.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                )
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.13f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 11.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "$folderCount folders",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = "•",
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "$documentCount files",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Icon(
+                            imageVector = Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

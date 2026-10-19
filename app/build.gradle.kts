@@ -9,7 +9,8 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-// Load signing credentials from local.properties (local dev) or environment variables (CI)
+// Load signing credentials from local.properties (local dev) or environment variables (CI).
+// Preserve the existing signing setup used by previously published releases.
 val localProps = Properties().also { props ->
     val localPropsFile = rootProject.file("local.properties")
     if (localPropsFile.exists()) props.load(localPropsFile.inputStream())
@@ -43,8 +44,8 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 22
-        versionName = "1.9.3"
+        versionCode = 23
+        versionName = "1.9.4"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -119,6 +120,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.material3:material3:1.2.1")

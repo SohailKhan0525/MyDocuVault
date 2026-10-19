@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +55,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mydocvault.ui.navigation.NavRoutes
 import com.mydocvault.utils.BiometricAuth
+import com.mydocvault.utils.AndroidKeystoreCipher
 import com.mydocvault.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
 
@@ -72,9 +74,34 @@ fun PinScreen(
 
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
+    var autoBiometricPromptAttempted by remember { mutableStateOf(false) }
 
     val isCreate = mode == "create"
-    val canUnlock = !savedPin.isNullOrBlank()
+    val credentialExists = !savedPin.isNullOrBlank()
+    val pinKeyUnavailable = savedPin == AndroidKeystoreCipher.KEY_UNAVAILABLE_SENTINEL
+    val canUnlock = credentialExists && !pinKeyUnavailable
+
+    LaunchedEffect(isCreate, biometricEnabled, credentialExists, context) {
+        if (!isCreate && biometricEnabled && credentialExists &&
+            !autoBiometricPromptAttempted && context is FragmentActivity
+        ) {
+            autoBiometricPromptAttempted = true
+            val biometric = BiometricAuth(context)
+            if (biometric.canAuthenticate()) {
+                biometric.authenticate(
+                    title = "Unlock MyDocVault",
+                    subtitle = "Authenticate to access your private vault",
+                    onSuccess = {
+                        val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
+                        navController.navigate(destination) {
+                            popUpTo(NavRoutes.Pin) { inclusive = true }
+                        }
+                    },
+                    onError = { message -> error = message }
+                )
+            }
+        }
+    }
     val header = if (isCreate) "Create PIN" else "Welcome back"
     val subheader = if (isCreate) "Set a 4-digit PIN to protect your vault" else if (!canUnlock) "Loading…" else "Enter your PIN to unlock"
 
@@ -133,7 +160,13 @@ fun PinScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 PinDots(count = 4, filled = pin.length)
                 Spacer(modifier = Modifier.height(12.dp))
-                if (error.isNotBlank()) {
+                if (pinKeyUnavailable) {
+                    Text(
+                        text = "The secure PIN key is unavailable. Use biometric unlock if it is enabled on this device.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else if (error.isNotBlank()) {
                     Text(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
@@ -224,10 +257,14 @@ fun PinScreen(
                             }
                             if (isCreate) {
                                 scope.launch {
-                                    viewModel.setPin(pin)
-                                    val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
-                                    navController.navigate(destination) {
-                                        popUpTo(NavRoutes.Pin) { inclusive = true }
+                                    try {
+                                        viewModel.setPin(pin)
+                                        val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
+                                        navController.navigate(destination) {
+                                            popUpTo(NavRoutes.Pin) { inclusive = true }
+                                        }
+                                    } catch (_: Exception) {
+                                        error = "Could not secure the PIN on this device. Please try again."
                                     }
                                 }
                             } else {

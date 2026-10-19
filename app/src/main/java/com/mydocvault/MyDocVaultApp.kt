@@ -53,26 +53,28 @@ class MyDocVaultApp : Application(), Configuration.Provider {
     private fun setupGlobalExceptionHandler() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
+            // Keep sensitive paths and provider details out of user-facing crash messages.
+            android.util.Log.e("MyDocVaultApp", "Unhandled application error", exception)
             android.os.Handler(android.os.Looper.getMainLooper()).post {
                 android.widget.Toast.makeText(
                     applicationContext,
-                    "Error: ${exception.message ?: "Unknown"}",
+                    "Something went wrong. Please reopen MyDocVault.",
                     android.widget.Toast.LENGTH_LONG
                 ).show()
             }
-            // Give time for the toast to be added to the queue
-            try { Thread.sleep(1000) } catch (e: InterruptedException) {}
-            // Still call default handler to let the OS know it crashed, 
-            // but the user will see the toast instead of just disappearing instantly.
-            // But user asked "instead of crash". If we swallow, we must loop.
-            // Looping main thread after crash is risky. Let's start an Intent to restart and show toast.
-            val intent = android.content.Intent(applicationContext, MainActivity::class.java).apply {
-                putExtra("global_error", exception.message)
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            // Allow the OS default handler to report the crash; do not relaunch into
+            // the same failing state or swallow the exception in an unsafe loop.
+            try {
+                Thread.sleep(250)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
             }
-            applicationContext.startActivity(intent)
-            android.os.Process.killProcess(android.os.Process.myPid())
-            System.exit(1)
+            if (defaultHandler != null) {
+                defaultHandler.uncaughtException(thread, exception)
+            } else {
+                android.os.Process.killProcess(android.os.Process.myPid())
+                kotlin.system.exitProcess(1)
+            }
         }
     }
 

@@ -1,36 +1,39 @@
 package com.mydocvault.utils
 
 enum class FileType(val raw: String) {
-    IMAGE("image"),
-    PDF("pdf"),
-    DOCX("docx"),
-    VIDEO("video"),
-    AUDIO("audio"),
-    TEXT("text"),
-    ARCHIVE("archive"),
-    CODE("code"),
-    SPREADSHEET("spreadsheet"),
-    PRESENTATION("presentation"),
-    OTHER("other");
+    IMAGE("image"), PDF("pdf"), DOCX("docx"), VIDEO("video"), AUDIO("audio"),
+    TEXT("text"), ARCHIVE("archive"), CODE("code"), SPREADSHEET("spreadsheet"),
+    PRESENTATION("presentation"), OFFICE("office"), EBOOK("ebook"), FONT("font"),
+    DATABASE("database"), OTHER("other");
 
     companion object {
-        fun fromRaw(raw: String): FileType {
-            return entries.firstOrNull { it.raw == raw } ?: OTHER
-        }
+        fun fromRaw(raw: String): FileType =
+            entries.firstOrNull { it.raw == raw.lowercase() } ?: OTHER
 
         fun fromFileName(name: String): FileType {
-            val lower = name.lowercase()
-            return when {
-                lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".bmp") -> IMAGE
-                lower.endsWith(".pdf") -> PDF
-                lower.endsWith(".docx") || lower.endsWith(".doc") -> DOCX
-                lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".avi") || lower.endsWith(".mov") -> VIDEO
-                lower.endsWith(".mp3") || lower.endsWith(".wav") || lower.endsWith(".ogg") || lower.endsWith(".flac") -> AUDIO
-                lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".csv") || lower.endsWith(".rtf") -> TEXT
-                lower.endsWith(".zip") || lower.endsWith(".rar") || lower.endsWith(".7z") || lower.endsWith(".tar") || lower.endsWith(".gz") -> ARCHIVE
-                lower.endsWith(".kt") || lower.endsWith(".java") || lower.endsWith(".xml") || lower.endsWith(".json") || lower.endsWith(".html") || lower.endsWith(".css") || lower.endsWith(".js") || lower.endsWith(".py") || lower.endsWith(".cpp") || lower.endsWith(".c") || lower.endsWith(".cs") || lower.endsWith(".go") || lower.endsWith(".rs") || lower.endsWith(".rb") || lower.endsWith(".swift") || lower.endsWith(".ts") || lower.endsWith(".php") || lower.endsWith(".sh") || lower.endsWith(".sql") -> CODE
-                lower.endsWith(".xls") || lower.endsWith(".xlsx") || lower.endsWith(".ods") -> SPREADSHEET
-                lower.endsWith(".ppt") || lower.endsWith(".pptx") || lower.endsWith(".odp") -> PRESENTATION
+            val lower = name.substringAfterLast('/', name).lowercase()
+            val extension = lower.substringAfterLast('.', "")
+            return when (extension) {
+                "jpg", "jpeg", "png", "webp", "gif", "bmp", "tif", "tiff",
+                "heic", "heif", "avif", "ico", "jfif" -> IMAGE
+                "pdf" -> PDF
+                "docx" -> DOCX
+                "doc", "odt" -> OFFICE
+                "mp4", "mkv", "avi", "mov", "webm", "3gp", "m4v", "mpeg", "mpg" -> VIDEO
+                "mp3", "wav", "ogg", "flac", "m4a", "aac", "opus", "mid", "midi" -> AUDIO
+                "txt", "md", "csv", "tsv", "log", "xml", "yaml", "yml", "toml", "ini",
+                "conf", "properties", "rtf" -> TEXT
+                "zip", "rar", "7z", "tar", "gz", "bz2", "xz", "zst", "tgz", "jar", "war",
+                "apk", "aab", "dmg", "iso" -> ARCHIVE
+                "kt", "kts", "java", "gradle", "py", "c", "h", "cpp", "hpp", "cs", "go",
+                "rs", "rb", "swift", "ts", "tsx", "js", "jsx", "php", "sh", "sql", "html",
+                "htm", "css", "scss", "json", "ipynb", "dart", "lua", "pl", "r", "scala",
+                "clj", "ex", "exs", "erl", "hrl", "vue", "svelte", "graphql", "proto" -> CODE
+                "xls", "xlsx", "xlsm", "xlsb", "xlt", "xltx", "ods", "numbers" -> SPREADSHEET
+                "ppt", "pptx", "pptm", "pps", "ppsx", "pot", "potx", "odp", "key" -> PRESENTATION
+                "epub", "mobi", "azw", "azw3", "fb2", "djvu" -> EBOOK
+                "ttf", "otf", "woff", "woff2" -> FONT
+                "db", "sqlite", "sqlite3", "mdb", "accdb" -> DATABASE
                 else -> OTHER
             }
         }

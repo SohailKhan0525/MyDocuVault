@@ -3,6 +3,7 @@ package com.mydocvault
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,6 +45,7 @@ class ViewerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
 
         val uri: Uri? = if (intent.action == Intent.ACTION_VIEW) {
             intent.data
@@ -87,6 +89,7 @@ fun ExternalViewerScreen(
     val isSaving by viewModel.isSaving.collectAsState()
 
     var tempFile by remember { mutableStateOf<File?>(null) }
+    var previewError by remember { mutableStateOf<String?>(null) }
     var isLoadingTemp by remember { mutableStateOf(true) }
     var docxText by remember { mutableStateOf("") }
     var docxError by remember { mutableStateOf(false) }
@@ -102,30 +105,52 @@ fun ExternalViewerScreen(
 
     LaunchedEffect(uri) {
         isLoadingTemp = true
-        withContext(Dispatchers.IO) {
-            try {
-                val tempDir = File(context.cacheDir, "temp_preview").apply { mkdirs() }
-                val targetName = displayName.ifBlank { "preview_${System.currentTimeMillis()}" }
-                val file = File(tempDir, targetName)
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(file).use { output ->
-                        input.copyTo(output)
-                        output.flush()
-                    }
-                }
-                tempFile = file
+        previewError = null
+        try {
+            val file = withContext(Dispatchers.IO) {
+                val tempDir = File(context.cacheDir, "temp_preview").apply {
+                    if (!exists() && !mkdirs()) error("Could not prepare temporary preview storage.")
+                }.canonicalFile
+                val targetName = displayName
+                    .substringAfterLast('/')
+                    .substringAfterLast('\\')
+                    .filterNot { it.isISOControl() }
+                    .trim()
+                    .trim('.')
+                    .ifBlank { "preview_${System.currentTimeMillis()}" }
+                val file = File(tempDir, targetName).canonicalFile
+                require(file.parentFile == tempDir) { "Invalid preview filename." }
 
-                if (fileType == FileType.DOCX) {
-                    try {
-                        docxText = DocxTextExtractor.extractText(file)
-                        docxError = false
-                    } catch (_: Exception) {
-                        docxError = true
+                try {
+                    val input = context.contentResolver.openInputStream(uri)
+                        ?: error("The selected file could not be opened.")
+                    input.use {
+                        FileOutputStream(file).use { output ->
+                            it.copyTo(output)
+                            output.flush()
+                        }
                     }
+                } catch (exception: Exception) {
+                    file.delete()
+                    throw exception
                 }
-            } catch (_: Exception) {}
+                file
+            }
+            tempFile = file
+
+            if (fileType == FileType.DOCX) {
+                try {
+                    docxText = withContext(Dispatchers.IO) { DocxTextExtractor.extractText(file) }
+                    docxError = false
+                } catch (_: Exception) {
+                    docxError = true
+                }
+            }
+        } catch (_: Exception) {
+            previewError = "Could not load this file. Check that it is accessible and try again."
+        } finally {
+            isLoadingTemp = false
         }
-        isLoadingTemp = false
     }
 
     Scaffold(
@@ -194,7 +219,7 @@ fun ExternalViewerScreen(
                                         uri
                                     }
                                     val openIntent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(targetUri, "*/*")
+                                        setDataAndType(targetUri, getMimeTypeForFileName(displayName))
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
                                     context.startActivity(Intent.createChooser(openIntent, "Open with"))
@@ -219,6 +244,24 @@ fun ExternalViewerScreen(
         ) {
             if (isLoadingTemp) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (previewError != null) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        text = previewError.orEmpty(),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             } else {
                 val file = tempFile
                 when (fileType) {

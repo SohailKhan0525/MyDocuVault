@@ -3,6 +3,7 @@ package com.mydocvault
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
@@ -14,6 +15,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         
         val error = intent?.getStringExtra("global_error")
         if (error != null) {

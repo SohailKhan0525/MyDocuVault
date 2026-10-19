@@ -7,8 +7,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.mydocvault.utils.AndroidKeystoreCipher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,11 +33,12 @@ class UserPreferences @Inject constructor(
     }
 
     val storageLocationFlow: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[storageLocationKey] ?: STORAGE_DOCUMENTS
+        prefs[storageLocationKey] ?: STORAGE_INTERNAL
     }
 
+    // Legacy plaintext PINs are read temporarily so existing installs can migrate in-place.
     val pinFlow: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[pinKey]
+        prefs[pinKey]?.let(AndroidKeystoreCipher::decryptStoredValue)
     }
 
     val biometricEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -47,32 +50,37 @@ class UserPreferences @Inject constructor(
     }
 
     suspend fun setStorageLocation(location: String) {
-        context.dataStore.edit { prefs ->
-            prefs[storageLocationKey] = location
-        }
+        context.dataStore.edit { prefs -> prefs[storageLocationKey] = location }
     }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[onboardingCompletedKey] = completed
-        }
+        context.dataStore.edit { prefs -> prefs[onboardingCompletedKey] = completed }
     }
 
     suspend fun setPin(pin: String) {
+        require(pin.length == 4 && pin.all(Char::isDigit)) { "PIN must contain exactly four digits." }
+        val encrypted = AndroidKeystoreCipher.encrypt(pin)
+        context.dataStore.edit { prefs -> prefs[pinKey] = encrypted }
+    }
+
+    /**
+     * Encrypts the previous plaintext PIN without changing it. The compare-before-write
+     * avoids overwriting a newer PIN if the user changes it while migration is running.
+     */
+    suspend fun migrateLegacyPinIfNeeded() {
+        val current = context.dataStore.data.first()[pinKey] ?: return
+        if (AndroidKeystoreCipher.isEncrypted(current)) return
+        val encrypted = AndroidKeystoreCipher.encrypt(current)
         context.dataStore.edit { prefs ->
-            prefs[pinKey] = pin
+            if (prefs[pinKey] == current) prefs[pinKey] = encrypted
         }
     }
 
     suspend fun clearPin() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(pinKey)
-        }
+        context.dataStore.edit { prefs -> prefs.remove(pinKey) }
     }
 
     suspend fun setBiometricEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[biometricEnabledKey] = enabled
-        }
+        context.dataStore.edit { prefs -> prefs[biometricEnabledKey] = enabled }
     }
 }

@@ -14,22 +14,65 @@ import java.io.FileOutputStream
 
 fun getDocumentDisplayName(context: Context, uri: Uri): String {
     val resolver = context.contentResolver
-    resolver.query(uri, null, null, null, null)?.use { cursor ->
-        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        if (nameIndex >= 0 && cursor.moveToFirst()) {
-            val name = cursor.getString(nameIndex)
-            if (!name.isNullOrBlank()) {
-                return name
+    try {
+        resolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                cursor.getString(nameIndex)?.takeIf { it.isNotBlank() }?.let { return it }
             }
         }
+    } catch (_: Exception) {
+        // Some third-party document providers reject metadata queries; fall back safely.
     }
-    val fallback = uri.lastPathSegment?.substringAfterLast('/')
-    if (!fallback.isNullOrBlank()) {
-        return fallback
+    val fallback = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+    if (fallback != null) return fallback
+    val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(runCatching { resolver.getType(uri) }.getOrNull()) ?: "bin"
+    return "Document_" + System.currentTimeMillis() + ".$ext"
+}
+
+fun getMimeTypeForFileName(name: String): String {
+    val extension = name.substringAfterLast('.', "").lowercase()
+    val mapped = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+    if (!mapped.isNullOrBlank() && mapped != "application/octet-stream") return mapped
+    return when (extension) {
+        "pdf" -> "application/pdf"
+        "doc" -> "application/msword"
+        "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "xls" -> "application/vnd.ms-excel"
+        "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "xlsm" -> "application/vnd.ms-excel.sheet.macroEnabled.12"
+        "ppt" -> "application/vnd.ms-powerpoint"
+        "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        "pptm" -> "application/vnd.ms-powerpoint.presentation.macroEnabled.12"
+        "odt" -> "application/vnd.oasis.opendocument.text"
+        "ods" -> "application/vnd.oasis.opendocument.spreadsheet"
+        "odp" -> "application/vnd.oasis.opendocument.presentation"
+        "csv" -> "text/csv"
+        "tsv" -> "text/tab-separated-values"
+        "txt", "log" -> "text/plain"
+        "md" -> "text/markdown"
+        else -> "*/*"
     }
-    val mimeType = resolver.getType(uri)
-    val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "bin"
-    return "Document_${System.currentTimeMillis()}.$ext"
+}
+
+fun openDocumentExternally(context: Context, filePath: String, displayName: String): Boolean {
+    return try {
+        val file = File(filePath)
+        if (!file.isFile || !file.canRead()) return false
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, getMimeTypeForFileName(displayName))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Open with"))
+        true
+    } catch (_: Exception) {
+        false
+    }
 }
 
 fun shareDocument(context: Context, document: DocumentEntity) {
@@ -98,8 +141,7 @@ fun shareDocument(
         FileType.TEXT -> "text/*"
         FileType.ARCHIVE -> "application/zip"
         else -> {
-            val ext = finalName.substringAfterLast('.', "").lowercase()
-            MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "*/*"
+            getMimeTypeForFileName(finalName)
         }
     }
 

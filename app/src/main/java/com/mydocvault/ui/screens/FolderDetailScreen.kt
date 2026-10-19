@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -29,6 +30,8 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,6 +43,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Text
@@ -48,6 +53,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +101,16 @@ fun FolderDetailScreen(
     val rawDocuments by viewModel.documents.collectAsState()
     val currentFolder by viewModel.currentFolder.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(actionMessage) {
+        val message = actionMessage
+        if (!message.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearActionMessage()
+        }
+    }
 
     var isSearchActive by remember { mutableStateOf(false) }
     var showSheet by remember { mutableStateOf(false) }
@@ -127,6 +143,7 @@ fun FolderDetailScreen(
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             if (isSearchActive) {
                 TopAppBar(
@@ -311,13 +328,17 @@ fun FolderDetailScreen(
                                 val fileType = FileType.fromRaw(doc.fileType)
                                 val docIcon = when (fileType) {
                                     FileType.IMAGE -> Icons.Default.Image
-                                    FileType.PDF   -> Icons.Default.Description
-                                    else           -> Icons.Default.FileOpen
+                                    FileType.PDF -> Icons.Default.Description
+                                    FileType.SPREADSHEET -> Icons.Default.TableChart
+                                    FileType.PRESENTATION -> Icons.Default.Slideshow
+                                    else -> Icons.Default.FileOpen
                                 }
                                 val docIconColor = when (fileType) {
                                     FileType.IMAGE -> MaterialTheme.colorScheme.secondary
-                                    FileType.PDF   -> MaterialTheme.colorScheme.error
-                                    else           -> MaterialTheme.colorScheme.tertiary
+                                    FileType.PDF -> MaterialTheme.colorScheme.error
+                                    FileType.SPREADSHEET -> MaterialTheme.colorScheme.secondary
+                                    FileType.PRESENTATION -> MaterialTheme.colorScheme.tertiary
+                                    else -> MaterialTheme.colorScheme.tertiary
                                 }
                                 ItemCard(
                                     name = doc.name,
@@ -377,7 +398,7 @@ fun FolderDetailScreen(
                     subtitle = "PDF, DOCX",
                     onClick = {
                         showSheet = false
-                        docLauncher.launch(arrayOf("application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        docLauncher.launch(arrayOf("*/*"))
                     }
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -473,6 +494,7 @@ private fun ItemCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(

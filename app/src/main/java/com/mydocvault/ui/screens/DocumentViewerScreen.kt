@@ -35,7 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.core.content.FileProvider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,6 +60,7 @@ import com.mydocvault.ui.components.PdfViewer
 import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.utils.DocxTextExtractor
 import com.mydocvault.utils.FileType
+import com.mydocvault.utils.openDocumentExternally
 import com.mydocvault.utils.shareDocument
 import com.mydocvault.viewmodel.DocumentViewModel
 import kotlinx.coroutines.Dispatchers
@@ -94,7 +94,7 @@ fun DocumentViewerScreen(
 
     LaunchedEffect(document?.id) {
         val doc = document ?: return@LaunchedEffect
-        if (FileType.fromRaw(doc.fileType) == FileType.DOCX) {
+        if (FileType.fromRaw(doc.fileType) == FileType.DOCX && doc.name.endsWith(".docx", ignoreCase = true)) {
             docxError = false
             docxText = try {
                 withContext(Dispatchers.IO) {
@@ -148,85 +148,43 @@ fun DocumentViewerScreen(
                     FileType.IMAGE -> ZoomableImage(path = doc.filePath)
                     FileType.PDF -> PdfViewer(filePath = doc.filePath)
                     FileType.DOCX -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                                .padding(20.dp)
-                        ) {
-                            if (docxError) {
-                                Text(
-                                    text = "Could not extract text from this document.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.error,
-                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                )
-                            } else {
-                                Text(
-                                    text = docxText.ifBlank { "No preview available" },
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                )
+                        if (doc.name.endsWith(".docx", ignoreCase = true)) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(20.dp)
+                            ) {
+                                if (docxError) {
+                                    Text(
+                                        text = "Could not extract text from this document.",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.error,
+                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                                    )
+                                } else {
+                                    Text(
+                                        text = docxText.ifBlank { "No preview available" },
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                                    )
+                                }
+                            }
+                        } else {
+                            ExternalFilePrompt(name = doc.name) {
+                                val opened = openDocumentExternally(context, doc.filePath, doc.name)
+                                if (!opened) {
+                                    android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
                     else -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.size(80.dp)
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.FolderOpen,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(40.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = doc.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onBackground
-                                    )
-                                    Text(
-                                        text = "No built-in preview available",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                OutlinedButton(
-                                    onClick = {
-                                        try {
-                                            val file = File(doc.filePath)
-                                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(uri, "*/*")
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            context.startActivity(Intent.createChooser(intent, "Open with"))
-                                        } catch (e: Exception) {
-                                            android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    modifier = Modifier.width(200.dp)
-                                ) {
-                                    Text("Open externally")
-                                }
+                        ExternalFilePrompt(name = doc.name) {
+                            val opened = openDocumentExternally(context, doc.filePath, doc.name)
+                            if (!opened) {
+                                android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -265,7 +223,7 @@ fun DocumentViewerScreen(
                     subtitle = "Pick a new file to replace this one",
                     onClick = {
                         showSheet = false
-                        replaceLauncher.launch(arrayOf("image/*", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                        replaceLauncher.launch(arrayOf("*/*"))
                     }
                 )
                 DocSheetItem(
@@ -344,3 +302,53 @@ private fun DocSheetItem(
         }
     }
 }
+
+@Composable
+private fun ExternalFilePrompt(
+    name: String,
+    onOpen: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(80.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FolderOpen,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "Open with a compatible app to view this file",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            OutlinedButton(onClick = onOpen, modifier = Modifier.width(200.dp)) {
+                Text("Open externally")
+            }
+        }
+    }
+}
+
