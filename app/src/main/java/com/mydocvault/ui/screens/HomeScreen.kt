@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -86,6 +88,7 @@ import com.mydocvault.ui.components.EmptyState
 import com.mydocvault.ui.components.RenameDialog
 import com.mydocvault.ui.navigation.NavRoutes
 import com.mydocvault.utils.FileType
+import com.mydocvault.utils.ImageToPdfConverter
 import com.mydocvault.utils.getDocumentDisplayName
 import com.mydocvault.viewmodel.HomeViewModel
 
