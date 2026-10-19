@@ -523,7 +523,7 @@ fun HomeScreen(
                 BottomSheetItem(
                     icon = Icons.Default.PictureAsPdf,
                     title = if (isCreatingPdf) "Creating PDF…" else "Images to PDF",
-                    subtitle = if (isCreatingPdf) "Preparing the pages…" else "Combine up to 100 PNG or JPEG images into one PDF",
+                    subtitle = if (isCreatingPdf) "Preparing the pages…" else "Combine up to " + ImageToPdfConverter.MAX_IMAGES + " PNG or JPEG images into one PDF",
                     onClick = {
                         if (!isCreatingPdf) {
                             showSheet = false
