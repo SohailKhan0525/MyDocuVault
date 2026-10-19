@@ -21,7 +21,7 @@ data class ImportItem(
     val notes: String = ""
 ) {
     val newFullName get() = if (extension.isEmpty()) baseName else "$baseName.$extension"
-    val isUnsupported get() = com.mydocvault.utils.FileType.fromFileName(newFullName) == com.mydocvault.utils.FileType.OTHER || extension.isEmpty()
+    val isUnsupported get() = newFullName.isBlank()
 }
 
 @HiltViewModel
@@ -44,6 +44,9 @@ class ImportViewModel @Inject constructor(
     private val _importComplete = MutableStateFlow(false)
     val importComplete: StateFlow<Boolean> = _importComplete.asStateFlow()
 
+    private val _importError = MutableStateFlow<String?>(null)
+    val importError: StateFlow<String?> = _importError.asStateFlow()
+
     private val _lastImportedDocId = MutableStateFlow<Long?>(null)
     val lastImportedDocId: StateFlow<Long?> = _lastImportedDocId.asStateFlow()
 
@@ -56,6 +59,8 @@ class ImportViewModel @Inject constructor(
     }
 
     fun setItems(uris: List<Uri>, nameResolver: (Uri) -> String, mimeResolver: (Uri) -> String) {
+        _importComplete.value = false
+        _importError.value = null
         _items.value = uris.map { uri ->
             val originalName = nameResolver(uri)
             val dotIndex = originalName.lastIndexOf('.')
@@ -100,27 +105,52 @@ class ImportViewModel @Inject constructor(
     }
 
     fun importFiles(onFinished: ((Long?) -> Unit)? = null) {
-        if (_items.value.isEmpty()) return
-        
+        if (_items.value.isEmpty() || _isImporting.value) return
+
         viewModelScope.launch {
             _isImporting.value = true
+            _importError.value = null
+            val batch = _items.value.toList()
             val folderId = _selectedFolder.value?.id
+            val failures = mutableListOf<String>()
+            var successCount = 0
             var lastId: Long? = null
-            _items.value.forEach { item ->
-                val finalName = item.newFullName.ifBlank { item.originalName }
-                val fileType = com.mydocvault.utils.FileType.fromFileName(finalName).raw
-                lastId = repository.importDocument(
-                    uri = item.uri,
-                    displayName = finalName,
-                    folderId = folderId,
-                    fileType = fileType,
-                    notes = item.notes.ifBlank { null }
-                )
+
+            try {
+                batch.forEach { item ->
+                    try {
+                        val finalName = item.newFullName.ifBlank { item.originalName }
+                        val fileType = com.mydocvault.utils.FileType.fromFileName(finalName).raw
+                        lastId = repository.importDocument(
+                            uri = item.uri,
+                            displayName = finalName,
+                            folderId = folderId,
+                            fileType = fileType,
+                            notes = item.notes.ifBlank { null }
+                        )
+                        successCount++
+                    } catch (exception: Exception) {
+                        failures += item.originalName
+                    }
+                }
+
+                _lastImportedDocId.value = lastId
+                _importComplete.value = successCount > 0
+                if (failures.isNotEmpty()) {
+                    _importError.value = if (successCount == 0) {
+                        "Couldn't import any files. Check file access and free storage."
+                    } else {
+                        "Imported $successCount of ${batch.size} files. ${failures.size} failed."
+                    }
+                }
+                onFinished?.invoke(lastId)
+            } catch (exception: Exception) {
+                _importError.value = exception.message?.take(180)
+                    ?: "Import failed. Check file access and available storage."
+            } finally {
+                _isImporting.value = false
             }
-            _lastImportedDocId.value = lastId
-            _isImporting.value = false
-            _importComplete.value = true
-            onFinished?.invoke(lastId)
         }
     }
+}
 }
