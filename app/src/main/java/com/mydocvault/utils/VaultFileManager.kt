@@ -52,7 +52,7 @@ class VaultFileManager(
 
     suspend fun createFolderDirectory(folderRelativePath: String): File = withContext(Dispatchers.IO) {
         val baseDir = getBaseStorageDir()
-        val folderDir = if (folderRelativePath.isBlank()) baseDir else File(baseDir, folderRelativePath)
+        val folderDir = if (folderRelativePath.isBlank()) baseDir else resolveSafeChild(baseDir, folderRelativePath)
         folderDir.mkdirs()
         try {
             MediaScannerConnection.scanFile(context, arrayOf(folderDir.absolutePath), null, null)
@@ -117,14 +117,14 @@ class VaultFileManager(
         val parentDir = sourceFile.parentFile ?: return@withContext currentPath
 
         val sourceExt = sourceFile.extension
-        val cleanName = newName.trim()
+        val cleanName = sanitizeFileName(newName.trim())
         val targetName = if (!cleanName.contains('.') && sourceExt.isNotBlank()) {
             "$cleanName.$sourceExt"
         } else {
             cleanName
         }
 
-        var targetFile = File(parentDir, targetName)
+        var targetFile = resolveSafeChild(parentDir, targetName)
         if (targetFile.absolutePath == sourceFile.absolutePath) return@withContext currentPath
 
         if (targetFile.exists()) {
@@ -133,7 +133,7 @@ class VaultFileManager(
             val ext = if (dot > 0) targetName.substring(dot) else ""
             var counter = 1
             while (targetFile.exists()) {
-                targetFile = File(parentDir, "$base ($counter)$ext")
+                targetFile = resolveSafeChild(parentDir, "$base ($counter)$ext")
                 counter++
             }
         }
@@ -169,8 +169,8 @@ class VaultFileManager(
             resolveStorageDir(UserPreferences.STORAGE_INTERNAL)
         )
         dirs.forEach { base ->
-            val oldFolder = File(base, oldRelativePath)
-            val newFolder = File(base, newRelativePath)
+            val oldFolder = resolveSafeChild(base, oldRelativePath)
+            val newFolder = resolveSafeChild(base, newRelativePath)
             if (oldFolder.exists()) {
                 newFolder.parentFile?.mkdirs()
                 if (oldFolder.renameTo(newFolder)) {
@@ -210,7 +210,7 @@ class VaultFileManager(
             resolveStorageDir(UserPreferences.STORAGE_INTERNAL)
         )
         dirs.forEach { base ->
-            val target = File(base, folderRelativePath)
+            val target = resolveSafeChild(base, folderRelativePath)
             if (target.exists()) {
                 target.deleteRecursively()
                 try {
@@ -224,16 +224,16 @@ class VaultFileManager(
         val sourceFile = File(currentPath)
         if (!sourceFile.exists()) return@withContext currentPath
         val baseDir = getBaseStorageDir()
-        val targetDir = if (newFolderRelativePath.isNullOrBlank()) baseDir else File(baseDir, newFolderRelativePath)
+        val targetDir = if (newFolderRelativePath.isNullOrBlank()) baseDir else resolveSafeChild(baseDir, newFolderRelativePath)
         targetDir.mkdirs()
-        var targetFile = File(targetDir, sourceFile.name)
+        var targetFile = resolveSafeChild(targetDir, sourceFile.name)
         if (targetFile.exists() && targetFile.absolutePath != sourceFile.absolutePath) {
             val dotIndex = sourceFile.name.lastIndexOf('.')
             val baseName = if (dotIndex > 0) sourceFile.name.substring(0, dotIndex) else sourceFile.name
             val ext = if (dotIndex > 0) sourceFile.name.substring(dotIndex) else ""
             var counter = 1
             while (targetFile.exists()) {
-                targetFile = File(targetDir, "$baseName ($counter)$ext")
+                targetFile = resolveSafeChild(targetDir, "$baseName ($counter)$ext")
                 counter++
             }
         }
