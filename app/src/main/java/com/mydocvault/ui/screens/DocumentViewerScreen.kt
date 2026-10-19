@@ -61,6 +61,7 @@ import com.mydocvault.ui.components.PdfViewer
 import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.utils.DocxTextExtractor
 import com.mydocvault.utils.FileType
+import com.mydocvault.utils.getMimeTypeForFileName
 import com.mydocvault.utils.shareDocument
 import com.mydocvault.viewmodel.DocumentViewModel
 import kotlinx.coroutines.Dispatchers
@@ -215,7 +216,7 @@ fun DocumentViewerScreen(
                                             val file = File(doc.filePath)
                                             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                                             val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(uri, "*/*")
+                                                setDataAndType(uri, getMimeTypeForFileName(file.name))
                                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                             }
                                             context.startActivity(Intent.createChooser(intent, "Open with"))
