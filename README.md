@@ -1,6 +1,6 @@
 # MyDocuVault
 
-**MyDocuVault** is a private, offline document vault for Android. Keep your important files — images, PDFs, and Word documents — locked away on your device with PIN and biometric protection. No accounts, no cloud sync, no data ever leaves your phone.
+**MyDocuVault** is a private, offline document vault for Android. Store images, PDFs, Word documents, Excel workbooks, PowerPoint presentations, archives, code, audio, video, and other file types behind PIN and biometric protection. Unknown formats can be opened with a compatible app installed on your device. No accounts or cloud sync are required.
 
 ---
 
@@ -10,7 +10,8 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 
 - You set a **4-digit PIN** (and optionally enable **fingerprint / face unlock**) to protect access.
 - Inside, you can create a **nested folder hierarchy** to organise files any way you like.
-- You can **import images, PDFs, and DOCX files** from your device, then view, rename, move, or delete them at any time.
+- You can **import any file type**, including PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, images, archives, media, and generic files, then rename, move, share, or delete them.
+- You can **combine up to 100 selected images into a single multi-page PDF** directly on your device.
 - Everything is stored in the app's **private internal storage** — other apps cannot access your files.
 - A built-in **backup system** zips your documents and database into a single file saved to `Documents/MyDocuVaultBackup/` on your device — and can restore everything from that same file.
 - **Auto-backup** runs silently every 8 hours in the background using WorkManager so your data is always protected.
@@ -29,14 +30,15 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - 🗂️ **Configurable Storage Location** — choose where your documents are stored (Documents, Downloads, or Private App Storage) with automatic disk folder creation
 
 ### Security
-- 🔒 **PIN lock** — 4-digit PIN required on every app launch
-- 👆 **Biometric unlock** — optional fingerprint, face, or iris authentication
-- 🗄️ **Private & Configurable Storage** — files saved safely to chosen storage location or app-scoped internal storage
-- 📵 **Fully offline** — no accounts, no cloud, no tracking
+- 🔒 **PIN lock** — 4-digit PIN checked on every app launch; the stored PIN is encrypted with AES-GCM using a device-bound Android Keystore key
+- 👆 **Biometric unlock** — optional fingerprint/face authentication prompts automatically when enabled; cancelling falls back to the PIN
+- 🗄️ **Private storage by default** — new/unconfigured installs use app-private internal storage; public Documents/Downloads storage remains an optional setting
+- 🛡️ **Local data protections** — Android backup is disabled for vault data, screenshots/recent-app thumbnails are blocked, and ZIP restore validates paths and extraction limits
+- 📵 **Offline-first** — no account or cloud sync is required
 
 ### File Management
 - 📁 **Nested folders** — create, rename, and delete folders at any depth on disk and in database
-- 📥 **Import documents** — bring in JPG/PNG images, PDF files, and DOCX files
+- 📥 **Import any file** — Office spreadsheets and presentations, Word files, PDFs, images, archives, media, code, and other extensions
 - ✏️ **Rename & move** — reorganise documents without re-importing
 - 🔄 **Replace** — swap a document's file while keeping its metadata
 - 🗑️ **Delete** — remove individual documents or entire folders
@@ -45,6 +47,8 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - 🖼️ **Image viewer** — pinch-to-zoom with Coil-powered rendering
 - 📄 **PDF viewer** — page-by-page navigation with full-width rendering, loading indicator, and graceful error handling using Android's built-in `PdfRenderer`
 - 📝 **DOCX preview** — plain-text extraction and display of Word documents
+- 📊 **Office support** — Excel and PowerPoint files are stored with their original extensions and opened through compatible apps on the device
+- 🧾 **Images to PDF** — select up to 100 images for one multi-page PDF, generated locally
 
 ### Backup & Restore
 - 💾 **Manual backup** — tap *Back up now* in Settings to create a timestamped ZIP containing all documents and the Room database
