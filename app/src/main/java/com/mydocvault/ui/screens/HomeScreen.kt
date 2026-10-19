@@ -110,7 +110,18 @@ fun HomeScreen(
 
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val isCreatingPdf by viewModel.isCreatingPdf.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(actionMessage) {
+        val message = actionMessage
+        if (!message.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearActionMessage()
+        }
+    }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.checkForUpdate(context)
