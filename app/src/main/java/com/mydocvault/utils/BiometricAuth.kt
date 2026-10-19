@@ -28,7 +28,13 @@ class BiometricAuth(
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    onError(errString.toString())
+                    // Cancel/dismiss is the normal PIN fallback, not an authentication failure.
+                    if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
+                        errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON &&
+                        errorCode != BiometricPrompt.ERROR_CANCELED
+                    ) {
+                        onError(errString.toString())
+                    }
                 }
 
                 override fun onAuthenticationFailed() {
