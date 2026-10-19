@@ -33,7 +33,7 @@ class ImageToPdfConverter(private val context: Context) {
         require(uris.isNotEmpty()) { "Select at least one image." }
         require(uris.size <= MAX_IMAGES) { "Select no more than $MAX_IMAGES images at a time." }
 
-        val output = File(context.cacheDir, "images_\${System.currentTimeMillis()}.pdf")
+        val output = File(context.cacheDir, "images_${System.currentTimeMillis()}.pdf")
         val document = PdfDocument()
         try {
             uris.forEachIndexed { index, uri ->
