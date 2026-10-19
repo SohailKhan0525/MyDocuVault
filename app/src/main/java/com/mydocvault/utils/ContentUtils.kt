@@ -55,6 +55,26 @@ fun getMimeTypeForFileName(name: String): String {
     }
 }
 
+fun openDocumentExternally(context: Context, filePath: String, displayName: String): Boolean {
+    return try {
+        val file = File(filePath)
+        if (!file.isFile || !file.canRead()) return false
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, getMimeTypeForFileName(displayName))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Open with"))
+        true
+    } catch (_: Exception) {
+        false
+    }
+}
+
 fun shareDocument(context: Context, document: DocumentEntity) {
     shareDocument(context, document.filePath, document.name, FileType.fromRaw(document.fileType))
 }
