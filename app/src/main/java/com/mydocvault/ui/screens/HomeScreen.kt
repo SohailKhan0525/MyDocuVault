@@ -145,6 +145,13 @@ fun HomeScreen(
         }
     )
 
+    val imageToPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments(),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) viewModel.createPdfFromImages(context, uris)
+        }
+    )
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20),
         onResult = { uris ->
