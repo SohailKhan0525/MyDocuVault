@@ -11,8 +11,6 @@ android {
 
     defaultConfig {
         minSdk = 26
-        versionCode = 7672
-        versionName = "7.6.7.2"
     }
 
     compileOptions {

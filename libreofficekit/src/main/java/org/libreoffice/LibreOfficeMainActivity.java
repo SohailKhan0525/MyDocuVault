@@ -267,9 +267,9 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         mIsExperimentalMode = sPrefs.getBoolean(ENABLE_EXPERIMENTAL_PREFS_KEY, false);
         mIsDeveloperMode = mIsExperimentalMode
                 && sPrefs.getBoolean(ENABLE_DEVELOPER_PREFS_KEY, false);
-        if (sPrefs.getInt(ASSETS_EXTRACTED_PREFS_KEY, 0) != BuildConfig.VERSION_CODE) {
+        if (sPrefs.getInt(ASSETS_EXTRACTED_PREFS_KEY, 0) != 7672) {
             if (copyFromAssets(getAssets(), "unpack", getApplicationInfo().dataDir)) {
-                sPrefs.edit().putInt(ASSETS_EXTRACTED_PREFS_KEY, BuildConfig.VERSION_CODE).apply();
+                sPrefs.edit().putInt(ASSETS_EXTRACTED_PREFS_KEY, 7672).apply();
             }
         }
     }
