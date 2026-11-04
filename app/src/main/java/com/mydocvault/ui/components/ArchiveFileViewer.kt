@@ -79,7 +79,7 @@ private fun listArchiveEntries(file: File): List<String> = runCatching {
                 } else {
                     CompressorStreamFactory().createCompressorInputStream(source)
                 }
-                ArchiveStreamFactory().createArchiveInputStream(archiveSource).use { archive ->
+                ArchiveStreamFactory().createArchiveInputStream("tar", archiveSource).use { archive ->
                     buildList<String> {
                         var entry = archive.nextEntry
                         while (entry != null) {
