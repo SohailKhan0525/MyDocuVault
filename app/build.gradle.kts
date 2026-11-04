@@ -44,8 +44,8 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 38
-        versionName = "1.14.1"
+        versionCode = 39
+        versionName = "1.15.0"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -124,6 +124,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.0")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.0")
     implementation("org.tukaani:xz:1.10")
     implementation("org.jsoup:jsoup:1.18.3")
     implementation(project(":libreofficekit"))

@@ -5,7 +5,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.composable
+import com.mydocvault.ui.screens.GuidePage
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.mydocvault.ui.screens.DocumentViewerScreen
@@ -23,22 +25,34 @@ fun AppNavGraph(
 ) {
     NavHost(
         navController = navController, startDestination = NavRoutes.Splash,
-        enterTransition = { fadeIn(tween(180)) + slideInHorizontally(tween(200)) { it / 18 } },
-        exitTransition = { fadeOut(tween(110)) },
-        popEnterTransition = { fadeIn(tween(160)) + slideInHorizontally(tween(180)) { -it / 18 } },
-        popExitTransition = { fadeOut(tween(100)) }
+        enterTransition = {
+            fadeIn(tween(220)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(240), initialOffset = { it / 9 })
+        },
+        exitTransition = { fadeOut(tween(180)) },
+        popEnterTransition = {
+            fadeIn(tween(280), initialAlpha = 0.80f) +
+                scaleIn(tween(280), initialScale = 0.97f)
+        },
+        popExitTransition = {
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(280), targetOffset = { it / 4 }) +
+                scaleOut(tween(280), targetScale = 0.94f) + fadeOut(tween(280))
+        }
     ) {
         composable(NavRoutes.Splash) {
             SplashScreen(navController)
         }
-        composable(NavRoutes.Onboarding) {
-            OnboardingScreen(navController)
+        navigation(startDestination = GuidePage.Filing.route, route = NavRoutes.Onboarding) {
+            GuidePage.entries.forEach { page ->
+                composable(page.route) { OnboardingScreen(navController, page) }
+            }
         }
         composable(
-            route = "${NavRoutes.Pin}?mode={mode}",
+            route = NavRoutes.PinPattern,
             arguments = listOf(navArgument("mode") { type = NavType.StringType; defaultValue = "unlock" })
-        ) {
-            PinScreen(navController, initialDocumentId = initialDocumentId)
+        ) { entry ->
+            PinScreen(navController, mode = entry.arguments?.getString("mode") ?: "unlock", initialDocumentId = initialDocumentId)
         }
         composable(NavRoutes.Home) {
             HomeScreen(navController)

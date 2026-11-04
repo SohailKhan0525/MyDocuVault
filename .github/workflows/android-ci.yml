@@ -25,11 +25,14 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Open real documents in the packaged reader
+      - name: Test document rendering and navigation
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 35
           arch: x86_64
-          disable-animations: true
+          disable-animations: false
           disk-size: 6G
-          script: ./gradlew connectedDebugAndroidTest --no-daemon
+          script: |
+            adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural
+            adb shell settings put global enable_back_animation 1
+            ./gradlew connectedDebugAndroidTest --no-daemon

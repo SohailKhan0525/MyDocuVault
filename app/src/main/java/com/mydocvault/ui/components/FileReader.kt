@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.withResumed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,10 +35,13 @@ fun FileReader(file: File, name: String, storedType: FileType) {
             var launched by rememberSaveable(file.path) { mutableStateOf(false) }
             var failed by rememberSaveable(file.path) { mutableStateOf(false) }
             val read = { failed = !openOfficeInLibreOffice(context, file.path, name) }
-            LaunchedEffect(file.path) {
-                if (!launched) {
-                    launched = true
-                    read()
+            val owner = LocalLifecycleOwner.current
+            LaunchedEffect(file.path, owner) {
+                owner.lifecycle.withResumed {
+                    if (!launched) {
+                        launched = true
+                        read()
+                    }
                 }
             }
             if (!launched) ReaderLoading()

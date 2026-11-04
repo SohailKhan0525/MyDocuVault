@@ -4,6 +4,7 @@ object NavRoutes {
     const val Splash = "splash"
     const val Onboarding = "onboarding"
     const val Pin = "pin"
+    const val PinPattern = "$Pin?mode={mode}"
     const val Home = "home"
     const val Folder = "folder"
     const val Document = "document"
