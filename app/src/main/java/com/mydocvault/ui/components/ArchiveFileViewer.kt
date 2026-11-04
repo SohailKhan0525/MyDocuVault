@@ -58,7 +58,7 @@ private fun listArchiveEntries(file: File): List<String> = runCatching {
     when {
         file.extension.equals("7z", ignoreCase = true) -> {
             SevenZFile(file).use { archive ->
-                buildList {
+                buildList<String> {
                     var entry = archive.nextEntry
                     while (entry != null) {
                         add(entry.name)
@@ -80,7 +80,7 @@ private fun listArchiveEntries(file: File): List<String> = runCatching {
                     CompressorStreamFactory().createCompressorInputStream(source)
                 }
                 ArchiveStreamFactory().createArchiveInputStream(archiveSource).use { archive ->
-                    buildList {
+                    buildList<String> {
                         var entry = archive.nextEntry
                         while (entry != null) {
                             add(entry.name)
