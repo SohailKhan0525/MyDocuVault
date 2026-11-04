@@ -11,6 +11,8 @@ android {
 
     defaultConfig {
         minSdk = 26
+        versionCode = 7672
+        versionName = "7.6.7.2"
     }
 
     compileOptions {
@@ -53,4 +55,6 @@ dependencies {
     implementation("androidx.preference:preference:1.2.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("org.libreoffice:unoloader:24.2.3")
+    implementation("org.libreoffice:libreoffice:24.2.3")
 }
