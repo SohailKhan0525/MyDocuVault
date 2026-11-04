@@ -60,8 +60,11 @@ import com.mydocvault.ui.components.PdfViewer
 import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.utils.DocxTextExtractor
 import com.mydocvault.utils.FileType
+import com.mydocvault.utils.OfficeTextExtractor
 import com.mydocvault.utils.openDocumentExternally
+import com.mydocvault.utils.readTextPreview
 import com.mydocvault.utils.shareDocument
+import com.mydocvault.utils.supportsInAppPreview
 import com.mydocvault.viewmodel.DocumentViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,6 +83,8 @@ fun DocumentViewerScreen(
     var showSheet by remember { mutableStateOf(false) }
     var docxText by remember { mutableStateOf("") }
     var docxError by remember { mutableStateOf(false) }
+    var previewText by remember { mutableStateOf("") }
+    var previewError by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState()
     val replaceLauncher = rememberLauncherForActivityResult(
@@ -102,6 +107,25 @@ fun DocumentViewerScreen(
                 }
             } catch (_: Exception) {
                 docxError = true
+                ""
+            }
+        }
+        val type = FileType.fromRaw(doc.fileType)
+        if (type == FileType.TEXT || type == FileType.CODE ||
+            (type == FileType.SPREADSHEET || type == FileType.PRESENTATION) &&
+            type.supportsInAppPreview(doc.name)
+        ) {
+            previewError = false
+            previewText = try {
+                withContext(Dispatchers.IO) {
+                    if (type == FileType.TEXT || type == FileType.CODE) {
+                        readTextPreview(File(doc.filePath))
+                    } else {
+                        OfficeTextExtractor.extract(File(doc.filePath), type)
+                    }
+                }
+            } catch (_: Exception) {
+                previewError = true
                 ""
             }
         }
@@ -177,6 +201,25 @@ fun DocumentViewerScreen(
                                 if (!opened) {
                                     android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
                                 }
+                            }
+                        }
+                    }
+                    FileType.TEXT, FileType.CODE, FileType.SPREADSHEET, FileType.PRESENTATION -> {
+                        if (previewError) {
+                            ExternalFilePrompt(name = doc.name) {
+                                if (!openDocumentExternally(context, doc.filePath, doc.name)) {
+                                    android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
+                            ) {
+                                Text(
+                                    text = previewText.ifBlank { "No text preview available for this file." },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
                             }
                         }
                     }
@@ -351,4 +394,3 @@ private fun ExternalFilePrompt(
         }
     }
 }
-

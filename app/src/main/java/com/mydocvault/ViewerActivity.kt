@@ -76,6 +76,51 @@ class ViewerActivity : ComponentActivity() {
     }
 }
 
+@Composable
+private fun TextPreview(text: String) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
+    ) {
+        Text(
+            text = text.ifBlank { "No text preview available for this file." },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
+private fun ExternalFilePrompt(name: String, onOpen: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Default.InsertDriveFile, contentDescription = null, modifier = Modifier.size(64.dp))
+        Spacer(Modifier.height(16.dp))
+        Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onOpen) { Text("Open in External App") }
+    }
+}
+
+private fun openExternal(context: android.content.Context, sourceUri: Uri, tempFile: File?, name: String) {
+    try {
+        val targetUri = if (tempFile?.exists() == true) {
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
+        } else {
+            sourceUri
+        }
+        val openIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(targetUri, getMimeTypeForFileName(name))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(openIntent, "Open with"))
+    } catch (_: Exception) {
+        Toast.makeText(context, "Could not open externally", Toast.LENGTH_SHORT).show()
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExternalViewerScreen(
@@ -93,6 +138,10 @@ fun ExternalViewerScreen(
     var isLoadingTemp by remember { mutableStateOf(true) }
     var docxText by remember { mutableStateOf("") }
     var docxError by remember { mutableStateOf(false) }
+    var officeText by remember { mutableStateOf("") }
+    var officeError by remember { mutableStateOf(false) }
+    var textPreview by remember { mutableStateOf("") }
+    var textError by remember { mutableStateOf(false) }
 
     var showMenu by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -144,6 +193,22 @@ fun ExternalViewerScreen(
                     docxError = false
                 } catch (_: Exception) {
                     docxError = true
+                }
+            }
+            if (fileType == FileType.TEXT || fileType == FileType.CODE) {
+                try {
+                    textPreview = withContext(Dispatchers.IO) { readTextPreview(file) }
+                    textError = false
+                } catch (_: Exception) {
+                    textError = true
+                }
+            }
+            if (fileType == FileType.SPREADSHEET || fileType == FileType.PRESENTATION) {
+                try {
+                    officeText = withContext(Dispatchers.IO) { OfficeTextExtractor.extract(file, fileType) }
+                    officeError = false
+                } catch (_: Exception) {
+                    officeError = true
                 }
             }
         } catch (_: Exception) {
@@ -316,49 +381,33 @@ fun ExternalViewerScreen(
                             }
                         }
                     }
-                    else -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp)
-                                .align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.InsertDriveFile,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                    FileType.TEXT, FileType.CODE -> {
+                        if (textError) {
+                            ExternalFilePrompt(
+                                name = displayName,
+                                onOpen = { openExternal(context, uri, tempFile, displayName) }
                             )
-                            Text(
-                                text = displayName,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Button(
-                                onClick = {
-                                    try {
-                                        val localFile = tempFile
-                                        val targetUri = if (localFile != null && localFile.exists()) {
-                                            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", localFile)
-                                        } else {
-                                            uri
-                                        }
-                                        val openIntent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(targetUri, "*/*")
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(Intent.createChooser(openIntent, "Open with"))
-                                    } catch (_: Exception) {
-                                        Toast.makeText(context, "Could not open externally", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            ) {
-                                Text("Open in External App")
-                            }
+                        } else {
+                            TextPreview(textPreview)
                         }
                     }
+                    FileType.SPREADSHEET, FileType.PRESENTATION -> {
+                        if (officeError) {
+                            ExternalFilePrompt(
+                                name = displayName,
+                                onOpen = { openExternal(context, uri, tempFile, displayName) }
+                            )
+                        } else {
+                            TextPreview(officeText)
+                        }
+                    }
+                    else -> {
+                        ExternalFilePrompt(
+                            name = displayName,
+                            onOpen = { openExternal(context, uri, tempFile, displayName) }
+                        )
+                    }
+
                 }
             }
         }
