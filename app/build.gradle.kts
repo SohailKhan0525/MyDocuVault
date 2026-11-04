@@ -44,8 +44,8 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 33
-        versionName = "1.13.3"
+        versionCode = 34
+        versionName = "1.13.4"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -106,6 +106,9 @@ android {
     }
 
     packaging {
+        jniLibs {
+            pickFirsts += "lib/arm64-v8a/libc++_shared.so"
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
