@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
@@ -67,6 +68,27 @@ fun openDocumentExternally(context: Context, filePath: String, displayName: Stri
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(uri, getMimeTypeForFileName(displayName))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        fun openOfficeInLibreOffice(context: Context, filePath: String, displayName: String): Boolean {
+            if (!Build.SUPPORTED_ABIS.any { it == "arm64-v8a" }) return false
+            return runCatching {
+                val file = File(filePath)
+                if (!file.isFile || !file.canRead()) return false
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
+                val intent = Intent(context, org.libreoffice.LibreOfficeMainActivity::class.java).apply {
+                    action = Intent.ACTION_VIEW
+                    data = uri
+                    type = getMimeTypeForFileName(displayName)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(intent)
+                true
+            }.getOrElse { false }
         }
         context.startActivity(Intent.createChooser(intent, "Open with"))
         true

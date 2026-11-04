@@ -64,6 +64,7 @@ import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.utils.FileType
 import com.mydocvault.utils.OfficeTextExtractor
 import com.mydocvault.utils.openDocumentExternally
+import com.mydocvault.utils.openOfficeInLibreOffice
 import com.mydocvault.utils.readTextPreview
 import com.mydocvault.utils.shareDocument
 import com.mydocvault.utils.supportsInAppPreview
@@ -177,30 +178,37 @@ fun DocumentViewerScreen(
                     FileType.VIDEO, FileType.AUDIO -> MediaFileViewer(filePath = doc.filePath)
                     FileType.ARCHIVE -> ArchiveFileViewer(filePath = doc.filePath)
                     FileType.DOCX -> {
-                        if (doc.name.endsWith(".docx", ignoreCase = true)) {
-                            if (docxError) {
-                                ExternalFilePrompt(name = doc.name) {
-                                    if (!openDocumentExternally(context, doc.filePath, doc.name)) {
-                                        android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            } else {
-                                DocumentTextPreview(
-                                    text = docxText,
-                                    fileName = doc.name,
-                                    fileType = FileType.DOCX
-                                )
-                            }
-                        } else {
-                            ExternalFilePrompt(name = doc.name) {
-                                val opened = openDocumentExternally(context, doc.filePath, doc.name)
-                                if (!opened) {
-                                    android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
-                                }
+                        ExternalFilePrompt(name = doc.name, actionLabel = "Open in LibreOffice") {
+                            val opened = openOfficeInLibreOffice(context, doc.filePath, doc.name)
+                            if (!opened && !openDocumentExternally(context, doc.filePath, doc.name)) {
+                                android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
-                    FileType.TEXT, FileType.CODE, FileType.OFFICE, FileType.SPREADSHEET, FileType.PRESENTATION -> {
+                    FileType.OFFICE, FileType.SPREADSHEET, FileType.PRESENTATION -> {
+                        val extension = doc.name.substringAfterLast('.').lowercase()
+                        if (extension in setOf("xls", "xlsx", "ppt", "pptx")) {
+                            ExternalFilePrompt(name = doc.name, actionLabel = "Open in LibreOffice") {
+                                val opened = openOfficeInLibreOffice(context, doc.filePath, doc.name)
+                                if (!opened && !openDocumentExternally(context, doc.filePath, doc.name)) {
+                                    android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else if (previewError) {
+                            ExternalFilePrompt(name = doc.name) {
+                                if (!openDocumentExternally(context, doc.filePath, doc.name)) {
+                                    android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            DocumentTextPreview(
+                                text = previewText,
+                                fileName = doc.name,
+                                fileType = currentFileType ?: FileType.OTHER
+                            )
+                        }
+                    }
+                    FileType.TEXT, FileType.CODE -> {
                         if (previewError) {
                             ExternalFilePrompt(name = doc.name) {
                                 if (!openDocumentExternally(context, doc.filePath, doc.name)) {
@@ -341,6 +349,7 @@ private fun DocSheetItem(
 @Composable
 private fun ExternalFilePrompt(
     name: String,
+    actionLabel: String = "Open externally",
     onOpen: () -> Unit
 ) {
     Box(
@@ -380,8 +389,8 @@ private fun ExternalFilePrompt(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            OutlinedButton(onClick = onOpen, modifier = Modifier.width(200.dp)) {
-                Text("Open externally")
+            OutlinedButton(onClick = onOpen, modifier = Modifier.width(220.dp)) {
+                Text(actionLabel)
             }
         }
     }

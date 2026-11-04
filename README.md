@@ -47,10 +47,11 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - 🖼️ **Image viewer** — pinch-to-zoom with Coil-powered rendering
 - 📄 **PDF viewer** — page-by-page navigation with full-width rendering, loading indicator, and graceful error handling using Android's built-in `PdfRenderer`
 - 📝 **Text and document preview** — fast, size-limited in-app previews for text, Markdown, logs, source code, and DOCX files
-- 📊 **Office support** — XLSX/XLSM/ODS and PPTX/PPTM/ODP files get a fast in-app text preview; legacy XLS/PPT and other binary formats open through a compatible app on the device
+- 📊 **Office support** — `.xls`, `.xlsx`, `.doc`, `.docx`, `.ppt`, and `.pptx` open in the bundled offline LibreOfficeKit renderer for layout-faithful viewing; unsupported formats use the system app chooser
 - 📦 **Universal file fallback** — every imported file remains viewable through Android's compatible-app chooser with the correct MIME type when an in-app renderer is not available
 - 🧾 **Images to PDF** — select up to 100 images for one multi-page PDF, generated locally
 - 🧩 **Open-source viewers** — PDF rendering uses AndroidPdfViewer, Markdown uses Markwon, media uses AndroidX Media3, Office parsing uses Apache POI, and archive inspection uses Apache Commons Compress
+- 📝 **LibreOfficeKit Office viewer** — the open-source Android bridge and runtime are included in the `libreofficekit` module; its arm64 native engine is downloaded and checksum-verified during Gradle builds
 
 ### Backup & Restore
 - 💾 **Manual backup** — tap *Back up now* in Settings to create a timestamped ZIP containing all documents and the Room database

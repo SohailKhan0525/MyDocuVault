@@ -16,4 +16,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "MyDocVault"
+include(":libreofficekit")
 include(":app")

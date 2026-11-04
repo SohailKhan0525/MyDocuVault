@@ -44,11 +44,12 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 29
-        versionName = "1.12.3"
+        versionCode = 30
+        versionName = "1.13.0"
         vectorDrawables {
             useSupportLibrary = true
         }
+
     }
 
     signingConfigs {
@@ -116,6 +117,7 @@ kapt {
 }
 
 dependencies {
+    implementation(project(":libreofficekit"))
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
@@ -126,6 +128,9 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.2.1")
     implementation("androidx.compose.foundation:foundation")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.preference:preference:1.2.1")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.5")

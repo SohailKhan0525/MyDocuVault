@@ -80,7 +80,11 @@ class ViewerActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ExternalFilePrompt(name: String, onOpen: () -> Unit) {
+private fun ExternalFilePrompt(
+    name: String,
+    actionLabel: String = "Open in External App",
+    onOpen: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -90,7 +94,7 @@ private fun ExternalFilePrompt(name: String, onOpen: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onOpen) { Text("Open in External App") }
+        Button(onClick = onOpen) { Text(actionLabel) }
     }
 }
 
@@ -347,18 +351,18 @@ fun ExternalViewerScreen(
                         }
                     }
                     FileType.DOCX -> {
-                        if (docxError) {
-                            ExternalFilePrompt(
-                                name = displayName,
-                                onOpen = { openExternal(context, uri, tempFile, displayName) }
-                            )
-                        } else {
-                            DocumentTextPreview(
-                                text = docxText,
-                                fileName = displayName,
-                                fileType = FileType.DOCX
-                            )
-                        }
+                        ExternalFilePrompt(
+                            name = displayName,
+                            actionLabel = "Open in LibreOffice",
+                            onOpen = {
+                                val opened = openOfficeInLibreOffice(
+                                    context,
+                                    file?.absolutePath.orEmpty(),
+                                    displayName
+                                )
+                                if (!opened) openExternal(context, uri, tempFile, displayName)
+                            }
+                        )
                     }
                     FileType.TEXT, FileType.CODE -> {
                         if (textError) {
@@ -375,7 +379,21 @@ fun ExternalViewerScreen(
                         }
                     }
                     FileType.OFFICE, FileType.SPREADSHEET, FileType.PRESENTATION -> {
-                        if (officeError) {
+                        val extension = displayName.substringAfterLast('.').lowercase()
+                        if (extension in setOf("xls", "xlsx", "ppt", "pptx")) {
+                            ExternalFilePrompt(
+                                name = displayName,
+                                actionLabel = "Open in LibreOffice",
+                                onOpen = {
+                                    val opened = openOfficeInLibreOffice(
+                                        context,
+                                        file?.absolutePath.orEmpty(),
+                                        displayName
+                                    )
+                                    if (!opened) openExternal(context, uri, tempFile, displayName)
+                                }
+                            )
+                        } else if (officeError) {
                             ExternalFilePrompt(
                                 name = displayName,
                                 onOpen = { openExternal(context, uri, tempFile, displayName) }
