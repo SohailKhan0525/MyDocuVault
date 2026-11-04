@@ -123,18 +123,21 @@ fun ExternalViewerScreen(
                 require(file.parentFile == tempDir) { "Invalid preview filename." }
 
                 if (file.isFile) return@withContext file
+                val partial = File.createTempFile("incoming-", ".part", tempDir)
                 try {
                     val input = context.contentResolver.openInputStream(uri)
                         ?: error("The selected file could not be opened.")
                     input.use {
-                        FileOutputStream(file).use { output ->
+                        FileOutputStream(partial).use { output ->
                             it.copyTo(output)
                             output.flush()
                         }
                     }
-                } catch (exception: Exception) {
-                    file.delete()
-                    throw exception
+                    java.nio.file.Files.move(partial.toPath(), file.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                } finally {
+                    partial.delete()
                 }
                 file
             }

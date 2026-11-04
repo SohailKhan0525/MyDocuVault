@@ -216,8 +216,11 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
                         if (mTempFile != null) mTempFile.delete();
                         return;
                     }
-                    if (ready) readerThread.queueEvent(new LOEvent(mTempFile.getPath(), LOEvent.LOAD));
-                    else showAlertDialog("This document could not be prepared for reading.");
+                    if (ready) readerThread.loadPreview(mTempFile);
+                    else {
+                        if (mTempFile != null) mTempFile.delete();
+                        showAlertDialog("This document could not be prepared for reading.");
+                    }
                 });
             });
         } else if (getIntent().getStringExtra(LibreOfficeUIActivity.NEW_DOC_TYPE_KEY) != null) {
@@ -510,7 +513,9 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         super.onDestroy();
 
         if (isFinishing()) { // Not an orientation change
-            if (mTempFile != null) {
+            if (mDocumentUri == null && mTempFile != null) {
+                // Only a newly created document is owned by the Activity.
+                // Read-only preview copies belong to the native worker.
                 // noinspection ResultOfMethodCallIgnored
                 mTempFile.delete();
             }
@@ -715,6 +720,7 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
     }
 
     public void showAlertDialog(String message) {
+        if (isFinishing() || isDestroyed()) return;
 
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(LibreOfficeMainActivity.this);
 
