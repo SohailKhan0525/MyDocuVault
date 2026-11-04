@@ -3,6 +3,7 @@ package com.mydocvault.ui
 import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.BackEventCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.filters.SdkSuppress
@@ -19,10 +20,17 @@ class PredictiveNavigationTest {
 
     // Use the platform clock and accessibility tree so Navigation runs on Android's main looper.
     private fun bounds(label: String): Rect? {
-        val root = automation.rootInActiveWindow ?: return null
-        val node = root.findAccessibilityNodeInfosByText(label)
-            .firstOrNull { it.text?.toString() == label && it.isVisibleToUser } ?: return null
-        return Rect().also { node.getBoundsInScreen(it) }
+        fun find(node: AccessibilityNodeInfo): Rect? {
+            if (node.text?.toString() == label && node.isVisibleToUser) {
+                return Rect().also { node.getBoundsInScreen(it) }
+            }
+            for (index in 0 until node.childCount) {
+                val child = node.getChild(index) ?: continue
+                find(child)?.let { return it }
+            }
+            return null
+        }
+        return automation.rootInActiveWindow?.let(::find)
     }
 
     private fun await(description: String, condition: () -> Boolean) {
@@ -44,6 +52,7 @@ class PredictiveNavigationTest {
         val button = requireNotNull(bounds("Continue"))
         input("tap ${button.centerX()} ${button.centerY()}")
         await("Reading page is active") { bounds(second) != null && bounds(first) == null }
+        automation.waitForIdle(400, 10_000)
     }
 
     @Test @SdkSuppress(minSdkVersion = 34)
