@@ -75,27 +75,27 @@ fun openDocumentExternally(context: Context, filePath: String, displayName: Stri
     } catch (_: Exception) {
         false
     }
+}
 
-    fun openOfficeInLibreOffice(context: Context, filePath: String, displayName: String): Boolean {
-        if (!Build.SUPPORTED_ABIS.any { it == "arm64-v8a" }) return false
-        return runCatching {
-            val file = File(filePath)
-            if (!file.isFile || !file.canRead()) return false
-            val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
-            val intent = Intent(context, org.libreoffice.LibreOfficeMainActivity::class.java).apply {
-                action = Intent.ACTION_VIEW
-                data = uri
-                type = getMimeTypeForFileName(displayName)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(intent)
-            true
-        }.getOrElse { false }
-    }
+fun openOfficeInLibreOffice(context: Context, filePath: String, displayName: String): Boolean {
+    if (!Build.SUPPORTED_ABIS.any { it == "arm64-v8a" }) return false
+    return runCatching {
+        val file = File(filePath)
+        if (!file.isFile || !file.canRead()) return false
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val intent = Intent(context, org.libreoffice.LibreOfficeMainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            data = uri
+            type = getMimeTypeForFileName(displayName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(intent)
+        true
+    }.getOrElse { false }
 }
 
 fun shareDocument(context: Context, document: DocumentEntity) {
