@@ -27,6 +27,7 @@ class LOKitThread extends Thread {
 
     private static final Object ENGINE = new Object();
     private volatile boolean closing;
+    private java.io.File previewCopy;
     private final LinkedBlockingQueue<LOEvent> mEventQueue = new LinkedBlockingQueue<LOEvent>();
 
     private TileProvider mTileProvider;
@@ -57,7 +58,11 @@ class LOKitThread extends Thread {
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
             } finally {
-                closeDocument();
+                try {
+                    closeDocument();
+                } finally {
+                    if (previewCopy != null) previewCopy.delete();
+                }
             }
         }
     }
@@ -440,6 +445,18 @@ class LOKitThread extends Thread {
     /**
      * Queue an event.
      */
+    // The native loader may still need this file after the Android window closes.
+    public synchronized void loadPreview(java.io.File file) {
+        if (closing) {
+            file.delete();
+            return;
+        }
+        previewCopy = file;
+        mEventQueue.add(new LOEvent(file.getPath(), LOEvent.LOAD));
+    }
+
+    public boolean isClosing() { return closing; }
+
     public synchronized void queueEvent(LOEvent event) {
         if (!closing) mEventQueue.add(event);
     }

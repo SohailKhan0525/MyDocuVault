@@ -15,6 +15,29 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class OfficeReaderTest {
+    @Test fun lateLoadErrorAfterBackDoesNotOpenAWindow() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val file = File.createTempFile("opening-", ".docx", context.cacheDir)
+        try {
+            instrumentation.context.assets.open("Field notes.docx").use { input ->
+                file.outputStream().use { input.copyTo(it) }
+            }
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val intent = Intent(context, LibreOfficeMainActivity::class.java)
+                .setDataAndType(uri, getMimeTypeForFileName(file.name))
+                .putExtra(Intent.EXTRA_TITLE, file.name)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            lateinit var closed: LibreOfficeMainActivity
+            ActivityScenario.launch<LibreOfficeMainActivity>(intent).use { scenario ->
+                scenario.onActivity { closed = it }
+            }
+            instrumentation.runOnMainSync { closed.showAlertDialog("Preview was closed") }
+        } finally {
+            file.delete()
+        }
+    }
+
     @Test fun opensFormattedDocumentsSheetsAndSlides() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext

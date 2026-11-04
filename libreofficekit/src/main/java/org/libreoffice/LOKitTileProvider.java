@@ -82,7 +82,7 @@ class LOKitTileProvider implements TileProvider {
                 (new File(fileToBeEncoded.getParent(),encodedFileName)).getPath()
         );
 
-        if (mDocument == null && !mContext.isPasswordProtected()) {
+        if (mDocument == null && !mContext.getReaderThread().isClosing() && !mContext.isPasswordProtected()) {
             Log.i(LOGTAG, "====> mOffice.documentLoad() returned null, trying to restart 'Office' and loading again");
             mOffice.destroy();
             Log.i(LOGTAG, "====> mOffice.destroy() done");
