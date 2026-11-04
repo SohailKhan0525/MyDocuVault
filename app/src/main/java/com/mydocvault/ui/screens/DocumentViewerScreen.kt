@@ -58,8 +58,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mydocvault.ui.components.PdfViewer
 import com.mydocvault.ui.components.DocumentTextPreview
+import com.mydocvault.ui.components.ArchiveFileViewer
+import com.mydocvault.ui.components.MediaFileViewer
 import com.mydocvault.ui.components.ZoomableImage
-import com.mydocvault.utils.DocxTextExtractor
 import com.mydocvault.utils.FileType
 import com.mydocvault.utils.OfficeTextExtractor
 import com.mydocvault.utils.openDocumentExternally
@@ -105,7 +106,7 @@ fun DocumentViewerScreen(
             docxError = false
             docxText = try {
                 withContext(Dispatchers.IO) {
-                    DocxTextExtractor.extractText(File(doc.filePath))
+                    OfficeTextExtractor.extract(File(doc.filePath), FileType.DOCX)
                 }
             } catch (_: Exception) {
                 docxError = true
@@ -113,7 +114,7 @@ fun DocumentViewerScreen(
             }
         }
         val type = FileType.fromRaw(doc.fileType)
-        if (type == FileType.TEXT || type == FileType.CODE ||
+        if (type == FileType.TEXT || type == FileType.CODE || type == FileType.OFFICE ||
             (type == FileType.SPREADSHEET || type == FileType.PRESENTATION) &&
             type.supportsInAppPreview(doc.name)
         ) {
@@ -173,29 +174,22 @@ fun DocumentViewerScreen(
                 when (FileType.fromRaw(doc.fileType)) {
                     FileType.IMAGE -> ZoomableImage(path = doc.filePath)
                     FileType.PDF -> PdfViewer(filePath = doc.filePath)
+                    FileType.VIDEO, FileType.AUDIO -> MediaFileViewer(filePath = doc.filePath)
+                    FileType.ARCHIVE -> ArchiveFileViewer(filePath = doc.filePath)
                     FileType.DOCX -> {
                         if (doc.name.endsWith(".docx", ignoreCase = true)) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(20.dp)
-                            ) {
-                                if (docxError) {
-                                    Text(
-                                        text = "Could not extract text from this document.",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.error,
-                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                    )
-                                } else {
-                                    Text(
-                                        text = docxText.ifBlank { "No preview available" },
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onBackground,
-                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                    )
+                            if (docxError) {
+                                ExternalFilePrompt(name = doc.name) {
+                                    if (!openDocumentExternally(context, doc.filePath, doc.name)) {
+                                        android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
                                 }
+                            } else {
+                                DocumentTextPreview(
+                                    text = docxText,
+                                    fileName = doc.name,
+                                    fileType = FileType.DOCX
+                                )
                             }
                         } else {
                             ExternalFilePrompt(name = doc.name) {
@@ -206,7 +200,7 @@ fun DocumentViewerScreen(
                             }
                         }
                     }
-                    FileType.TEXT, FileType.CODE, FileType.SPREADSHEET, FileType.PRESENTATION -> {
+                    FileType.TEXT, FileType.CODE, FileType.OFFICE, FileType.SPREADSHEET, FileType.PRESENTATION -> {
                         if (previewError) {
                             ExternalFilePrompt(name = doc.name) {
                                 if (!openDocumentExternally(context, doc.filePath, doc.name)) {

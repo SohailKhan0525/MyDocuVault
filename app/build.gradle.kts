@@ -44,8 +44,8 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 25
-        versionName = "1.11.0"
+        versionCode = 26
+        versionName = "1.12.0"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -146,6 +146,12 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.noties.markwon:core:4.6.2")
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+    implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("org.apache.poi:poi:5.2.5")
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("org.apache.poi:poi-scratchpad:5.2.5")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

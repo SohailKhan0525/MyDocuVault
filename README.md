@@ -50,6 +50,7 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - 📊 **Office support** — XLSX/XLSM/ODS and PPTX/PPTM/ODP files get a fast in-app text preview; legacy XLS/PPT and other binary formats open through a compatible app on the device
 - 📦 **Universal file fallback** — every imported file remains viewable through Android's compatible-app chooser with the correct MIME type when an in-app renderer is not available
 - 🧾 **Images to PDF** — select up to 100 images for one multi-page PDF, generated locally
+- 🧩 **Open-source viewers** — PDF rendering uses AndroidPdfViewer, Markdown uses Markwon, media uses AndroidX Media3, Office parsing uses Apache POI, and archive inspection uses Apache Commons Compress
 
 ### Backup & Restore
 - 💾 **Manual backup** — tap *Back up now* in Settings to create a timestamped ZIP containing all documents and the Room database

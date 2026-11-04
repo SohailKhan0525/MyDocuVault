@@ -28,6 +28,8 @@ import androidx.core.content.FileProvider
 import com.mydocvault.data.entity.FolderEntity
 import com.mydocvault.ui.components.PdfViewer
 import com.mydocvault.ui.components.DocumentTextPreview
+import com.mydocvault.ui.components.ArchiveFileViewer
+import com.mydocvault.ui.components.MediaFileViewer
 import com.mydocvault.ui.components.RenameDialog
 import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.ui.theme.MyDocVaultTheme
@@ -177,7 +179,9 @@ fun ExternalViewerScreen(
 
             if (fileType == FileType.DOCX) {
                 try {
-                    docxText = withContext(Dispatchers.IO) { DocxTextExtractor.extractText(file) }
+                    docxText = withContext(Dispatchers.IO) {
+                        OfficeTextExtractor.extract(file, FileType.DOCX)
+                    }
                     docxError = false
                 } catch (_: Exception) {
                     docxError = true
@@ -191,7 +195,7 @@ fun ExternalViewerScreen(
                     textError = true
                 }
             }
-            if (fileType == FileType.SPREADSHEET || fileType == FileType.PRESENTATION) {
+            if (fileType == FileType.OFFICE || fileType == FileType.SPREADSHEET || fileType == FileType.PRESENTATION) {
                 try {
                     officeText = withContext(Dispatchers.IO) { OfficeTextExtractor.extract(file, fileType) }
                     officeError = false
@@ -332,41 +336,28 @@ fun ExternalViewerScreen(
                             )
                         }
                     }
+                    FileType.VIDEO, FileType.AUDIO -> {
+                        if (file != null && file.exists()) {
+                            MediaFileViewer(filePath = file.absolutePath, autoPlay = false)
+                        }
+                    }
+                    FileType.ARCHIVE -> {
+                        if (file != null && file.exists()) {
+                            ArchiveFileViewer(filePath = file.absolutePath)
+                        }
+                    }
                     FileType.DOCX -> {
                         if (docxError) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp)
-                                    .align(Alignment.Center),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Description,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                                Text(
-                                    text = "Unable to extract text from this Word document.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
+                            ExternalFilePrompt(
+                                name = displayName,
+                                onOpen = { openExternal(context, uri, tempFile, displayName) }
+                            )
                         } else {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(16.dp)
-                            ) {
-                                Text(
-                                    text = docxText.ifEmpty { "This Word document is empty." },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                            }
+                            DocumentTextPreview(
+                                text = docxText,
+                                fileName = displayName,
+                                fileType = FileType.DOCX
+                            )
                         }
                     }
                     FileType.TEXT, FileType.CODE -> {
@@ -383,7 +374,7 @@ fun ExternalViewerScreen(
                             )
                         }
                     }
-                    FileType.SPREADSHEET, FileType.PRESENTATION -> {
+                    FileType.OFFICE, FileType.SPREADSHEET, FileType.PRESENTATION -> {
                         if (officeError) {
                             ExternalFilePrompt(
                                 name = displayName,
