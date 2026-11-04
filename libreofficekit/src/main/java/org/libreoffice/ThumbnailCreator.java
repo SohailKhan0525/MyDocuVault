@@ -20,6 +20,10 @@ import java.lang.ref.WeakReference;
  * Create thumbnails for the parts of the document.
  */
 public class ThumbnailCreator {
+    private final LOKitThread worker;
+
+    ThumbnailCreator(LOKitThread worker) { this.worker = worker; }
+
     private static final String LOG_TAG = ThumbnailCreator.class.getSimpleName();
     private static final int THUMBNAIL_SIZE = 256;
 
@@ -56,7 +60,7 @@ public class ThumbnailCreator {
             ThumbnailDrawable thumbnailDrawable = new ThumbnailDrawable(task);
             imageView.setImageDrawable(thumbnailDrawable);
             imageView.setMinimumHeight(THUMBNAIL_SIZE);
-            LOKitShell.sendThumbnailEvent(task);
+            worker.queueEvent(new LOEvent(LOEvent.THUMBNAIL, task));
         }
     }
 

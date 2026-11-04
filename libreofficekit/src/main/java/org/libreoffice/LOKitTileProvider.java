@@ -134,6 +134,7 @@ class LOKitTileProvider implements TileProvider {
         }
 
         mDocument.setPart(0);
+        resetDocumentSize();
 
         setupDocumentFonts();
 
@@ -536,32 +537,16 @@ class LOKitTileProvider implements TileProvider {
         int widthPixel = getPageWidth();
         int heightPixel = getPageHeight();
 
-        if (widthPixel > heightPixel) {
-            double ratio = heightPixel / (double) widthPixel;
-            widthPixel = size;
-            heightPixel = (int) (widthPixel * ratio);
-        } else {
-            double ratio = widthPixel / (double) heightPixel;
-            heightPixel = size;
-            widthPixel = (int) (heightPixel * ratio);
-        }
-
-        Log.w(LOGTAG, "Thumbnail size: " + getPageWidth() + " " + getPageHeight() + " " + widthPixel + " " + heightPixel);
-
+        // Empty sheets can be smaller than one device pixel. A zero-sized
+        // buffer passed to native paintTile can abort the entire process.
+        if (mDocument == null || size <= 0 || widthPixel <= 0 || heightPixel <= 0) return null;
+        double scale = (double) size / Math.max(widthPixel, heightPixel);
+        widthPixel = Math.max(1, (int) Math.round(widthPixel * scale));
+        heightPixel = Math.max(1, (int) Math.round(heightPixel * scale));
         ByteBuffer buffer = ByteBuffer.allocateDirect(widthPixel * heightPixel * 4);
-        if (mDocument != null)
-            mDocument.paintTile(buffer, widthPixel, heightPixel, 0, 0, (int) mWidthTwip, (int) mHeightTwip);
-
-        Bitmap bitmap = null;
-        try {
-            bitmap = Bitmap.createBitmap(widthPixel, heightPixel, Bitmap.Config.ARGB_8888);
-            bitmap.copyPixelsFromBuffer(buffer);
-        } catch (IllegalArgumentException e) {
-            Log.e(LOGTAG, "width (" + widthPixel + ") and height (" + heightPixel + ") must not be 0! (ToDo: likely timing issue)");
-        }
-        if (bitmap == null) {
-            Log.w(LOGTAG, "Thumbnail not created!");
-        }
+        mDocument.paintTile(buffer, widthPixel, heightPixel, 0, 0, (int) mWidthTwip, (int) mHeightTwip);
+        Bitmap bitmap = Bitmap.createBitmap(widthPixel, heightPixel, Bitmap.Config.ARGB_8888);
+        bitmap.copyPixelsFromBuffer(buffer);
         return bitmap;
     }
 

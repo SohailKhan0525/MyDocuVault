@@ -1,6 +1,6 @@
 <resources>
     <string name="guide_file_title">File it for later</string>
-    <string name="guide_file_body">Bring a receipt, a report or a whole folder of paperwork into your vault. Your files start in private storage on this device.</string>
+    <string name="guide_file_body">Keep receipts and reports in folders you name. Your files start in private storage on this device.</string>
     <string name="guide_read_title">Open to the page</string>
     <string name="guide_read_body">Read a document, check a sheet or move through a slide deck without leaving the app. The office reader works offline.</string>
     <string name="guide_lock_title">Choose your PIN</string>

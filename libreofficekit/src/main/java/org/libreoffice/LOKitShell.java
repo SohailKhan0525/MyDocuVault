@@ -70,11 +70,7 @@ public class LOKitShell {
      * Make sure LOKitThread is running and send event to it.
      */
     public static void sendEvent(LOEvent event) {
-        LibreOfficeMainActivity.loKitThread.queueEvent(event);
-    }
-
-    public static void sendThumbnailEvent(ThumbnailCreator.ThumbnailCreationTask task) {
-        LOKitShell.sendEvent(new LOEvent(LOEvent.THUMBNAIL, task));
+        LibreOfficeMainActivity.queueActiveEvent(event);
     }
 
     /**
@@ -121,10 +117,6 @@ public class LOKitShell {
 
     public static void sendSaveCopyAsEvent(String filePath, String fileFormat) {
         LOKitShell.sendEvent(new LOEvent(filePath, fileFormat, LOEvent.SAVE_COPY_AS));
-    }
-
-    public static void sendCloseEvent() {
-        LOKitShell.sendEvent(new LOEvent(LOEvent.CLOSE));
     }
 
     /**

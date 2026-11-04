@@ -23,10 +23,10 @@ public class DocumentPartViewListAdapter extends ArrayAdapter<DocumentPartView> 
     private final Activity activity;
     private final ThumbnailCreator thumbnailCollector;
 
-    public DocumentPartViewListAdapter(Activity activity, int resource, List<DocumentPartView> objects) {
+    public DocumentPartViewListAdapter(LibreOfficeMainActivity activity, int resource, List<DocumentPartView> objects) {
         super(activity, resource, objects);
         this.activity = activity;
-        this.thumbnailCollector = new ThumbnailCreator();
+        this.thumbnailCollector = new ThumbnailCreator(activity.getReaderThread());
     }
 
     @Override

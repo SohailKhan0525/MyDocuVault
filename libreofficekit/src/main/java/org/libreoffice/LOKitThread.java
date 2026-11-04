@@ -25,6 +25,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 class LOKitThread extends Thread {
     private static final String LOGTAG = LOKitThread.class.getSimpleName();
 
+    private static final Object ENGINE = new Object();
+    private volatile boolean closing;
     private final LinkedBlockingQueue<LOEvent> mEventQueue = new LinkedBlockingQueue<LOEvent>();
 
     private TileProvider mTileProvider;
@@ -36,7 +38,7 @@ class LOKitThread extends Thread {
     LOKitThread(LibreOfficeMainActivity context) {
         mContext = context;
         mInvalidationHandler = null;
-        TileProviderFactory.initialize();
+
     }
 
     /**
@@ -44,15 +46,18 @@ class LOKitThread extends Thread {
      */
     @Override
     public void run() {
-        while (true) {
-            LOEvent event;
+        // LibreOfficeKit is process-wide. Finish destroying the previous
+        // native document before a new Activity is allowed to load its own.
+        synchronized (ENGINE) {
             try {
-                event = mEventQueue.take();
-                processEvent(event);
-                if (event.mType == LOEvent.CLOSE) return;
+                while (!closing) {
+                    LOEvent event = mEventQueue.take();
+                    if (!closing) processEvent(event);
+                }
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
-                return;
+            } finally {
+                closeDocument();
             }
         }
     }
@@ -213,6 +218,7 @@ class LOKitThread extends Thread {
     private boolean loadDocument(String filePath) {
         mLayerClient = mContext.getLayerClient();
 
+        TileProviderFactory.initialize();
         mInvalidationHandler = new InvalidationHandler(mContext);
         mTileProvider = TileProviderFactory.create(mContext, mInvalidationHandler, filePath);
 
@@ -277,9 +283,6 @@ class LOKitThread extends Thread {
                 break;
             case LOEvent.SAVE_COPY_AS:
                 saveDocumentAs(event.filePath, event.fileType, false);
-                break;
-            case LOEvent.CLOSE:
-                closeDocument();
                 break;
             case LOEvent.SIZE_CHANGED:
                 redraw(false);
@@ -429,6 +432,7 @@ class LOKitThread extends Thread {
      * Create thumbnail for the requested document task.
      */
     private void createThumbnail(final ThumbnailCreator.ThumbnailCreationTask task) {
+        if (mTileProvider == null || closing) return;
         final Bitmap bitmap = task.getThumbnail(mTileProvider);
         task.applyBitmap(bitmap);
     }
@@ -436,16 +440,16 @@ class LOKitThread extends Thread {
     /**
      * Queue an event.
      */
-    public void queueEvent(LOEvent event) {
-        mEventQueue.add(event);
+    public synchronized void queueEvent(LOEvent event) {
+        if (!closing) mEventQueue.add(event);
     }
 
-    /**
-     * Clear all events in the queue (used when document is closed).
-     */
-    public void clearQueue() {
+    public synchronized void requestClose() {
+        closing = true;
         mEventQueue.clear();
+        mEventQueue.offer(new LOEvent(LOEvent.CLOSE)); // wake a worker waiting in take()
     }
+
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

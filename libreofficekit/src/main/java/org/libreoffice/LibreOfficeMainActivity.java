@@ -70,8 +70,15 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
     private static final int REQUEST_CODE_SAVEAS = 12345;
     private static final int REQUEST_CODE_EXPORT_TO_PDF = 12346;
 
-    //TODO "public static" is a temporary workaround
-    public static LOKitThread loKitThread;
+    private static volatile LibreOfficeMainActivity activeViewer;
+    private LOKitThread readerThread;
+
+    static void queueActiveEvent(LOEvent event) {
+        LibreOfficeMainActivity viewer = activeViewer;
+        if (viewer != null) viewer.readerThread.queueEvent(event);
+    }
+
+    LOKitThread getReaderThread() { return readerThread; }
 
     private GeckoLayerClient mLayerClient;
 
@@ -152,8 +159,14 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         mSearchController = new SearchController(this);
         mUNOCommandsController = new UNOCommandsController(this);
 
-        loKitThread = new LOKitThread(this);
-        loKitThread.start();
+        LibreOfficeMainActivity previous = activeViewer;
+        if (previous != null) {
+            previous.readerThread.requestClose();
+            previous.finish();
+        }
+        readerThread = new LOKitThread(this);
+        activeViewer = this;
+        readerThread.start();
 
         mLayerClient = new GeckoLayerClient(this);
         LayerView layerView = findViewById(R.id.layer_view);
@@ -203,7 +216,7 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
                         if (mTempFile != null) mTempFile.delete();
                         return;
                     }
-                    if (ready) LOKitShell.sendLoadEvent(mTempFile.getPath());
+                    if (ready) readerThread.queueEvent(new LOEvent(mTempFile.getPath(), LOEvent.LOAD));
                     else showAlertDialog("This document could not be prepared for reading.");
                 });
             });
@@ -491,7 +504,8 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
                 .unregisterOnSharedPreferenceChangeListener(this);
 
-        LOKitShell.sendCloseEvent();
+        if (activeViewer == this) activeViewer = null;
+        readerThread.requestClose();
         mLayerClient.destroy();
         super.onDestroy();
 
