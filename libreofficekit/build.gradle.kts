@@ -1,4 +1,5 @@
 import java.net.URI
+import java.security.MessageDigest
 
 plugins {
     id("com.android.library")
@@ -33,7 +34,7 @@ val downloadLibreOfficeNative = tasks.register("downloadLibreOfficeNative") {
                 .openStream()
                 .use { input -> libreOfficeNative.outputStream().use { output -> input.copyTo(output) } }
         }
-        val checksum = java.security.MessageDigest.getInstance("SHA-256")
+        val checksum = MessageDigest.getInstance("SHA-256")
             .digest(libreOfficeNative.readBytes())
             .joinToString("") { "%02x".format(it) }
         check(checksum == "25f2a13cbbf897b06b7e833519bf8ff8999762e4356bf97c3c2180cb373bdd5d") {
