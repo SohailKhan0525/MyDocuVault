@@ -14,15 +14,19 @@ runs:
         mkdir -p "$dest"
         fetch() {
           local apk="org.documentfoundation.libreoffice_$1.apk" digest="$2" base
-          if (cd "$dest" && echo "$digest  $apk" | sha256sum --check --status); then return 0; fi
-          for base in https://f-droid.org/repo https://ftp.fau.de/fdroid/repo \
-                      https://ftp.fau.de/fdroid/archive https://f-droid.org/archive; do
+          if [[ -f "$dest/$apk" ]] && (cd "$dest" && echo "$digest  $apk" | sha256sum --check --status); then
+            return 0
+          fi
+          for base in https://mirror.fcix.net/fdroid/repo https://ftp.gwdg.de/pub/android/fdroid/repo \
+                      https://f-droid.org/repo https://f-droid.org/archive; do
             echo "Fetching $apk from $base"
-            if curl --fail --location --silent --show-error --connect-timeout 12 --max-time 180 \
-                    --speed-limit 8192 --speed-time 30 "$base/$apk" -o "$dest/$apk.part" &&
-               (cd "$dest" && echo "$digest  $apk.part" | sha256sum --check --status); then
-              mv "$dest/$apk.part" "$dest/$apk"
-              return 0
+            if curl --fail --location --silent --show-error --connect-timeout 12 --max-time 360 --continue-at - \
+                    --speed-limit 8192 --speed-time 30 "$base/$apk" -o "$dest/$apk.part"; then
+              if (cd "$dest" && echo "$digest  $apk.part" | sha256sum --check --status); then
+                mv "$dest/$apk.part" "$dest/$apk"
+                return 0
+              fi
+              rm -f "$dest/$apk.part"
             fi
           done
           rm -f "$dest/$apk.part"
