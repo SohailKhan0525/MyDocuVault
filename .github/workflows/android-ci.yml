@@ -36,3 +36,10 @@ jobs:
             adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural
             adb shell settings put global enable_back_animation 1
             ./gradlew connectedDebugAndroidTest --no-daemon
+      - name: Upload device test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-device-test-results
+          path: app/build/outputs/androidTest-results/connected/debug
+          if-no-files-found: ignore
