@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
-import org.apache.commons.compress.archivers.ArchiveStreamFactory
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.CompressorStreamFactory
 import java.io.File
 import java.util.zip.ZipFile
@@ -79,7 +79,7 @@ private fun listArchiveEntries(file: File): List<String> = runCatching {
                 } else {
                     CompressorStreamFactory().createCompressorInputStream(source)
                 }
-                ArchiveStreamFactory().createArchiveInputStream("tar", archiveSource).use { archive ->
+                TarArchiveInputStream(archiveSource).use { archive ->
                     buildList<String> {
                         var entry = archive.nextEntry
                         while (entry != null) {
