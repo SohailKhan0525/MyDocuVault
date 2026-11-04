@@ -11,9 +11,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -26,12 +24,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.mydocvault.data.entity.FolderEntity
-import com.mydocvault.ui.components.PdfViewer
-import com.mydocvault.ui.components.DocumentTextPreview
-import com.mydocvault.ui.components.ArchiveFileViewer
-import com.mydocvault.ui.components.MediaFileViewer
+import com.mydocvault.ui.components.FileReader
 import com.mydocvault.ui.components.RenameDialog
-import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.ui.theme.MyDocVaultTheme
 import com.mydocvault.utils.*
 import com.mydocvault.viewmodel.ViewerViewModel
@@ -58,7 +52,16 @@ class ViewerActivity : ComponentActivity() {
             intent.data
         }
 
-        if (uri == null) {
+        val allowed = when (uri?.scheme) {
+            "content" -> uri.authority?.substringAfterLast('@') != "$packageName.fileprovider"
+            "file" -> runCatching {
+                val external = android.os.Environment.getExternalStorageDirectory().canonicalPath + File.separator
+                val path = File(requireNotNull(uri.path)).canonicalPath
+                path.startsWith(external) && !path.startsWith(external + "Android/")
+            }.getOrDefault(false)
+            else -> false
+        }
+        if (uri == null || !allowed) {
             Toast.makeText(this, "No file to view", Toast.LENGTH_SHORT).show()
             finish()
             return
@@ -79,42 +82,6 @@ class ViewerActivity : ComponentActivity() {
     }
 }
 
-@Composable
-private fun ExternalFilePrompt(
-    name: String,
-    actionLabel: String = "Open in External App",
-    onOpen: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(Icons.Default.InsertDriveFile, contentDescription = null, modifier = Modifier.size(64.dp))
-        Spacer(Modifier.height(16.dp))
-        Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = onOpen) { Text(actionLabel) }
-    }
-}
-
-private fun openExternal(context: android.content.Context, sourceUri: Uri, tempFile: File?, name: String) {
-    try {
-        val targetUri = if (tempFile?.exists() == true) {
-            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
-        } else {
-            sourceUri
-        }
-        val openIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(targetUri, getMimeTypeForFileName(name))
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(Intent.createChooser(openIntent, "Open with"))
-    } catch (_: Exception) {
-        Toast.makeText(context, "Could not open externally", Toast.LENGTH_SHORT).show()
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExternalViewerScreen(
@@ -130,13 +97,6 @@ fun ExternalViewerScreen(
     var tempFile by remember { mutableStateOf<File?>(null) }
     var previewError by remember { mutableStateOf<String?>(null) }
     var isLoadingTemp by remember { mutableStateOf(true) }
-    var docxText by remember { mutableStateOf("") }
-    var docxError by remember { mutableStateOf(false) }
-    var officeText by remember { mutableStateOf("") }
-    var officeError by remember { mutableStateOf(false) }
-    var textPreview by remember { mutableStateOf("") }
-    var textError by remember { mutableStateOf(false) }
-
     var showMenu by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedFolder by remember { mutableStateOf<FolderEntity?>(null) }
@@ -151,9 +111,7 @@ fun ExternalViewerScreen(
         previewError = null
         try {
             val file = withContext(Dispatchers.IO) {
-                val tempDir = File(context.cacheDir, "temp_preview").apply {
-                    if (!exists() && !mkdirs()) error("Could not prepare temporary preview storage.")
-                }.canonicalFile
+                val tempDir = viewModel.previewDirectory.canonicalFile
                 val targetName = displayName
                     .substringAfterLast('/')
                     .substringAfterLast('\\')
@@ -164,6 +122,7 @@ fun ExternalViewerScreen(
                 val file = File(tempDir, targetName).canonicalFile
                 require(file.parentFile == tempDir) { "Invalid preview filename." }
 
+                if (file.isFile) return@withContext file
                 try {
                     val input = context.contentResolver.openInputStream(uri)
                         ?: error("The selected file could not be opened.")
@@ -181,32 +140,8 @@ fun ExternalViewerScreen(
             }
             tempFile = file
 
-            if (fileType == FileType.DOCX) {
-                try {
-                    docxText = withContext(Dispatchers.IO) {
-                        OfficeTextExtractor.extract(file, FileType.DOCX)
-                    }
-                    docxError = false
-                } catch (_: Exception) {
-                    docxError = true
-                }
-            }
-            if (fileType == FileType.TEXT || fileType == FileType.CODE) {
-                try {
-                    textPreview = withContext(Dispatchers.IO) { readTextPreview(file) }
-                    textError = false
-                } catch (_: Exception) {
-                    textError = true
-                }
-            }
-            if (fileType == FileType.OFFICE || fileType == FileType.SPREADSHEET || fileType == FileType.PRESENTATION) {
-                try {
-                    officeText = withContext(Dispatchers.IO) { OfficeTextExtractor.extract(file, fileType) }
-                    officeError = false
-                } catch (_: Exception) {
-                    officeError = true
-                }
-            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             previewError = "Could not load this file. Check that it is accessible and try again."
         } finally {
@@ -325,95 +260,7 @@ fun ExternalViewerScreen(
                 }
             } else {
                 val file = tempFile
-                when (fileType) {
-                    FileType.IMAGE -> {
-                        ZoomableImage(path = file?.absolutePath ?: "")
-                    }
-                    FileType.PDF -> {
-                        if (file != null && file.exists()) {
-                            PdfViewer(filePath = file.absolutePath)
-                        } else {
-                            Text(
-                                text = "Unable to load PDF",
-                                modifier = Modifier.align(Alignment.Center),
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                    FileType.VIDEO, FileType.AUDIO -> {
-                        if (file != null && file.exists()) {
-                            MediaFileViewer(filePath = file.absolutePath, autoPlay = false)
-                        }
-                    }
-                    FileType.ARCHIVE -> {
-                        if (file != null && file.exists()) {
-                            ArchiveFileViewer(filePath = file.absolutePath)
-                        }
-                    }
-                    FileType.DOCX -> {
-                        ExternalFilePrompt(
-                            name = displayName,
-                            actionLabel = "Open in LibreOffice",
-                            onOpen = {
-                                val opened = openOfficeInLibreOffice(
-                                    context,
-                                    file?.absolutePath.orEmpty(),
-                                    displayName
-                                )
-                                if (!opened) openExternal(context, uri, tempFile, displayName)
-                            }
-                        )
-                    }
-                    FileType.TEXT, FileType.CODE -> {
-                        if (textError) {
-                            ExternalFilePrompt(
-                                name = displayName,
-                                onOpen = { openExternal(context, uri, tempFile, displayName) }
-                            )
-                        } else {
-                            DocumentTextPreview(
-                                text = textPreview,
-                                fileName = displayName,
-                                fileType = fileType
-                            )
-                        }
-                    }
-                    FileType.OFFICE, FileType.SPREADSHEET, FileType.PRESENTATION -> {
-                        val extension = displayName.substringAfterLast('.').lowercase()
-                        if (extension in setOf("xls", "xlsx", "ppt", "pptx")) {
-                            ExternalFilePrompt(
-                                name = displayName,
-                                actionLabel = "Open in LibreOffice",
-                                onOpen = {
-                                    val opened = openOfficeInLibreOffice(
-                                        context,
-                                        file?.absolutePath.orEmpty(),
-                                        displayName
-                                    )
-                                    if (!opened) openExternal(context, uri, tempFile, displayName)
-                                }
-                            )
-                        } else if (officeError) {
-                            ExternalFilePrompt(
-                                name = displayName,
-                                onOpen = { openExternal(context, uri, tempFile, displayName) }
-                            )
-                        } else {
-                            DocumentTextPreview(
-                                text = officeText,
-                                fileName = displayName,
-                                fileType = fileType
-                            )
-                        }
-                    }
-                    else -> {
-                        ExternalFilePrompt(
-                            name = displayName,
-                            onOpen = { openExternal(context, uri, tempFile, displayName) }
-                        )
-                    }
-
-                }
+                if (file != null) FileReader(file, displayName, fileType)
             }
         }
     }

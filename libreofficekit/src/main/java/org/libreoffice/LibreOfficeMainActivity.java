@@ -53,6 +53,8 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Main activity of the LibreOffice App. It is started in the UI thread.
@@ -60,6 +62,8 @@ import java.util.UUID;
 public class LibreOfficeMainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String LOGTAG = "LibreOfficeMainActivity";
+    private static final int RUNTIME_VERSION = 262063;
+    private static final ExecutorService fileWorker = Executors.newSingleThreadExecutor();
     public static final String ENABLE_EXPERIMENTAL_PREFS_KEY = "ENABLE_EXPERIMENTAL";
     private static final String ASSETS_EXTRACTED_PREFS_KEY = "ASSETS_EXTRACTED";
     private static final String ENABLE_DEVELOPER_PREFS_KEY = "ENABLE_DEVELOPER";
@@ -128,6 +132,7 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
     public void onCreate(Bundle savedInstanceState) {
         Log.w(LOGTAG, "onCreate..");
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
         updatePreferences();
         PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
                 .registerOnSharedPreferenceChangeListener(this);
@@ -139,7 +144,7 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         toolbarTop.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                LOKitShell.sendNavigationClickEvent();
+                finish();
             }
         });
 
@@ -186,22 +191,22 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
                 Log.d(LOGTAG, "SCHEME_FILE: getPath(): " + docUri.getPath());
                 toolbarTop.setTitle(docUri.getLastPathSegment());
             }
-            // create a temporary local copy to work with
-            boolean copyOK = copyFileToTemp(docUri) && mTempFile != null;
-            if (!copyOK) {
-                Log.e(LOGTAG, "couldn't create temporary file from " + docUri);
-                return;
-            }
-
-            // if input doc is a template, a new doc is created and a proper URI to save to
-            // will only be available after a "Save As"
-            if (isTemplate(docUri)) {
-                toolbarTop.setTitle(R.string.default_document_name);
-            } else {
-                mDocumentUri = docUri;
-            }
-
-            LOKitShell.sendLoadEvent(mTempFile.getPath());
+            mDocumentUri = docUri;
+            mbReadOnlyDoc = true;
+            final String title = getIntent().getStringExtra(Intent.EXTRA_TITLE);
+            if (title != null) toolbarTop.setTitle(title);
+            showProgressSpinner();
+            fileWorker.execute(() -> {
+                boolean ready = prepareRuntime() && copyFileToTemp(docUri);
+                runOnUiThread(() -> {
+                    if (isDestroyed() || isFinishing()) {
+                        if (mTempFile != null) mTempFile.delete();
+                        return;
+                    }
+                    if (ready) LOKitShell.sendLoadEvent(mTempFile.getPath());
+                    else showAlertDialog("This document could not be prepared for reading.");
+                });
+            });
         } else if (getIntent().getStringExtra(LibreOfficeUIActivity.NEW_DOC_TYPE_KEY) != null) {
             // New document type string is not null, meaning we want to open a new document
             String newDocumentType = getIntent().getStringExtra(LibreOfficeUIActivity.NEW_DOC_TYPE_KEY);
@@ -267,11 +272,13 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         mIsExperimentalMode = sPrefs.getBoolean(ENABLE_EXPERIMENTAL_PREFS_KEY, false);
         mIsDeveloperMode = mIsExperimentalMode
                 && sPrefs.getBoolean(ENABLE_DEVELOPER_PREFS_KEY, false);
-        if (sPrefs.getInt(ASSETS_EXTRACTED_PREFS_KEY, 0) != 7672) {
-            if (copyFromAssets(getAssets(), "unpack", getApplicationInfo().dataDir)) {
-                sPrefs.edit().putInt(ASSETS_EXTRACTED_PREFS_KEY, 7672).apply();
-            }
-        }
+    }
+
+    private boolean prepareRuntime() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        if (prefs.getInt(ASSETS_EXTRACTED_PREFS_KEY, 0) == RUNTIME_VERSION) return true;
+        if (!copyFromAssets(getAssets(), "unpack", getApplicationInfo().dataDir)) return false;
+        return prefs.edit().putInt(ASSETS_EXTRACTED_PREFS_KEY, RUNTIME_VERSION).commit();
     }
 
     // Loads a new Document and saves it to a temporary file
@@ -287,7 +294,12 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
 
     private boolean copyFileToTemp(Uri documentUri) {
         // CSV files need a .csv suffix to be opened in Calc.
+        String title = getIntent().getStringExtra(Intent.EXTRA_TITLE);
         String suffix = null;
+        if (title != null && title.contains(".")) {
+            String extension = title.substring(title.lastIndexOf('.'));
+            if (extension.matches("\\.[a-zA-Z0-9]{1,12}")) suffix = extension;
+        }
         String intentType = getIntent().getType();
         // K-9 mail uses the first, GMail uses the second variant.
         if ("text/comma-separated-values".equals(intentType) || "text/csv".equals(intentType))
@@ -871,7 +883,7 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
                 ByteBuffer buffer = ByteBuffer.allocate(4096);
                 while (source.read(buffer) > 0) {
                     buffer.flip();
-                    bytesTransferred += dest.write(buffer);
+                    while (buffer.hasRemaining()) bytesTransferred += dest.write(buffer);
                     buffer.clear();
                 }
                 Log.v(LOGTAG, "Success copying " + fromAssetPath + " to " + toPath + " bytes: " + bytesTransferred);

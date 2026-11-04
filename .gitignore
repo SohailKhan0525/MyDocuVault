@@ -11,5 +11,4 @@
 *.apk
 *.aab
 /android-sdk/
-# Downloaded LibreOfficeKit native engine (170 MB; fetched and checksum-verified by Gradle).
-libreofficekit/src/main/jniLibs/arm64-v8a/liblo-native-code.so
+/libreofficekit/build/

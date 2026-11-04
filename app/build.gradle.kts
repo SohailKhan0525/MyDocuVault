@@ -44,8 +44,8 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 36
-        versionName = "1.13.6"
+        versionCode = 37
+        versionName = "1.14.0"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -107,7 +107,8 @@ android {
 
     packaging {
         jniLibs {
-            pickFirsts += "lib/arm64-v8a/libc++_shared.so"
+            useLegacyPackaging = true
+            pickFirsts += "lib/*/libc++_shared.so"
         }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -120,6 +121,11 @@ kapt {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    implementation("org.tukaani:xz:1.10")
+    implementation("org.jsoup:jsoup:1.18.3")
     implementation(project(":libreofficekit"))
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.core:core-ktx:1.13.1")
@@ -157,9 +163,6 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("org.apache.commons:commons-compress:1.27.1")
-    implementation("org.apache.poi:poi:5.2.5")
-    implementation("org.apache.poi:poi-ooxml:5.2.5")
-    implementation("org.apache.poi:poi-scratchpad:5.2.5")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

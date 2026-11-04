@@ -1,5 +1,7 @@
 package com.mydocvault.ui.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -19,9 +21,15 @@ fun AppNavGraph(
     navController: NavHostController,
     initialDocumentId: Long? = null
 ) {
-    NavHost(navController = navController, startDestination = NavRoutes.Splash) {
+    NavHost(
+        navController = navController, startDestination = NavRoutes.Splash,
+        enterTransition = { fadeIn(tween(180)) + slideInHorizontally(tween(200)) { it / 18 } },
+        exitTransition = { fadeOut(tween(110)) },
+        popEnterTransition = { fadeIn(tween(160)) + slideInHorizontally(tween(180)) { -it / 18 } },
+        popExitTransition = { fadeOut(tween(100)) }
+    ) {
         composable(NavRoutes.Splash) {
-            SplashScreen(navController, initialDocumentId = initialDocumentId)
+            SplashScreen(navController)
         }
         composable(NavRoutes.Onboarding) {
             OnboardingScreen(navController)

@@ -49,8 +49,10 @@ class LOKitThread extends Thread {
             try {
                 event = mEventQueue.take();
                 processEvent(event);
+                if (event.mType == LOEvent.CLOSE) return;
             } catch (InterruptedException exception) {
-                throw new RuntimeException(exception);
+                Thread.currentThread().interrupt();
+                return;
             }
         }
     }

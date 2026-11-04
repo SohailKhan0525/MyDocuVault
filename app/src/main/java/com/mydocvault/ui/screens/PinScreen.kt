@@ -5,13 +5,15 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,7 +48,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,6 +74,7 @@ fun PinScreen(
     val scope = rememberCoroutineScope()
 
     var pin by remember { mutableStateOf("") }
+    var firstPin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     var autoBiometricPromptAttempted by remember { mutableStateOf(false) }
 
@@ -102,38 +104,32 @@ fun PinScreen(
             }
         }
     }
-    val header = if (isCreate) "Create PIN" else "Welcome back"
-    val subheader = if (isCreate) "Set a 4-digit PIN to protect your vault" else if (!canUnlock) "Loading…" else "Enter your PIN to unlock"
+    val header = if (!isCreate) "Unlock your vault" else if (firstPin.isEmpty()) "Choose your PIN" else "Confirm your PIN"
+    val subheader = if (isCreate && firstPin.isNotEmpty()) "Enter the same four digits again" else if (isCreate) "Enter four digits to protect your files" else if (!canUnlock) "Loading…" else "Enter your PIN to unlock"
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0f to MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                        1f to MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp),
+                .widthIn(max = 420.dp).fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Header section
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 64.dp)
+                modifier = Modifier.padding(top = 20.dp)
             ) {
                 Surface(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primary,
                     tonalElevation = 4.dp,
-                    modifier = Modifier.size(72.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Icon(
@@ -157,7 +153,7 @@ fun PinScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 PinDots(count = 4, filled = pin.length)
                 Spacer(modifier = Modifier.height(12.dp))
                 if (pinKeyUnavailable) {
@@ -187,20 +183,20 @@ fun PinScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 28.dp),
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
                         userScrollEnabled = false,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().height(216.dp)
                     ) {
                         val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back")
                         items(keys) { key ->
                             when (key) {
-                                "" -> Spacer(modifier = Modifier.aspectRatio(1f))
+                                "" -> Spacer(modifier = Modifier.height(48.dp))
                                 "back" -> {
                                     FilledTonalIconButton(
                                         onClick = {
@@ -208,7 +204,7 @@ fun PinScreen(
                                             error = ""
                                         },
                                         modifier = Modifier
-                                            .aspectRatio(1f)
+                                            .height(48.dp)
                                             .fillMaxWidth(),
                                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                                             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -230,7 +226,7 @@ fun PinScreen(
                                             }
                                         },
                                         modifier = Modifier
-                                            .aspectRatio(1f)
+                                            .height(48.dp)
                                             .fillMaxWidth(),
                                         shape = RoundedCornerShape(16.dp),
                                         colors = ButtonDefaults.filledTonalButtonColors(
@@ -256,6 +252,17 @@ fun PinScreen(
                                 return@Button
                             }
                             if (isCreate) {
+                                if (firstPin.isEmpty()) {
+                                    firstPin = pin
+                                    pin = ""
+                                    return@Button
+                                }
+                                if (firstPin != pin) {
+                                    firstPin = ""
+                                    pin = ""
+                                    error = "The PINs differed. Choose your PIN again."
+                                    return@Button
+                                }
                                 scope.launch {
                                     try {
                                         viewModel.setPin(pin)
@@ -290,7 +297,7 @@ fun PinScreen(
                         )
                     ) {
                         Text(
-                            text = if (isCreate) "Set PIN" else "Unlock",
+                            text = if (!isCreate) "Unlock" else if (firstPin.isEmpty()) "Continue" else "Set PIN",
                             style = MaterialTheme.typography.labelLarge
                         )
                     }

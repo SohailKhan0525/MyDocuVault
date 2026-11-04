@@ -1,12 +1,14 @@
 package com.mydocvault.ui.components
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
@@ -16,28 +18,35 @@ import androidx.media3.ui.PlayerView
 import java.io.File
 
 @Composable
-fun MediaFileViewer(filePath: String, autoPlay: Boolean = false) {
+fun MediaFileViewer(filePath: String, onOpen: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val player = remember(filePath) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(File(filePath).toUri()))
             prepare()
-            playWhenReady = autoPlay
+            playWhenReady = false
         }
     }
 
-    DisposableEffect(player) {
-        onDispose { player.release() }
-    }
-
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { PlayerView(it).apply { this.player = player } },
-            update = { it.player = player }
-        )
-        if (player.playbackState == androidx.media3.common.Player.STATE_BUFFERING) {
-            CircularProgressIndicator()
+    var failed by remember(player) { mutableStateOf(false) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(player, lifecycle) {
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) { failed = true }
+        }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) player.pause() }
+        player.addListener(listener)
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            player.removeListener(listener)
         }
     }
+    DisposableEffect(player) { onDispose { player.release() } }
+    if (failed) ReaderMessage("This media format could not be played.", "Choose another app", onOpen)
+    else AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { PlayerView(it).apply { setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS) } },
+        update = { it.player = player }
+    )
 }

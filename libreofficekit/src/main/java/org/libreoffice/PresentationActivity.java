@@ -22,6 +22,7 @@ public class PresentationActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
 
         View decorView = getWindow().getDecorView();
         // Hide the status bar.
@@ -37,6 +38,8 @@ public class PresentationActivity extends AppCompatActivity {
         // set up WebView
         mWebView = findViewById(R.id.presentation_view);
         mWebView.getSettings().setJavaScriptEnabled(true);
+        mWebView.getSettings().setBlockNetworkLoads(true);
+        mWebView.getSettings().setAllowContentAccess(false);
         mWebView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {

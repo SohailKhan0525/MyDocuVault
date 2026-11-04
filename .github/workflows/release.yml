@@ -1,119 +1,56 @@
-name: Build and Release APK
-
+name: Release Android
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
+concurrency:
+  group: publish-android
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
 jobs:
-  build:
-    name: Build Release APK
+  release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     env:
-      # Use the existing keystore and the same signing defaults as earlier releases.
       KEYSTORE_FILE: app/keystore/mydocvault.keystore
-
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Validate existing keystore
-        shell: bash
-        run: |
-          test -f "$KEYSTORE_FILE" || { echo "::error::The existing signing keystore file is missing."; exit 1; }
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Read version from build.gradle.kts
+          fetch-depth: 0
+      - name: Resolve release version
         id: version
+        shell: bash
+        run: python3 .github/scripts/release_version.py
+      - uses: actions/setup-java@v4
+        if: steps.version.outputs.publish == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Test and assemble signed APK
+        if: steps.version.outputs.publish == 'true'
         run: |
-          VERSION_NAME=$(grep 'versionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
-          VERSION_CODE=$(grep 'versionCode' app/build.gradle.kts | sed 's/[^0-9]//g')
-          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
-          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION_NAME ($VERSION_CODE)"
-
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon
-
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon
-
-      - name: Rename APKs
-        run: |
-          DEBUG_APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
-          RELEASE_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-          if [ -n "$DEBUG_APK" ]; then
-            cp "$DEBUG_APK" "app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk"
-          fi
-          if [ -z "$RELEASE_APK" ]; then
-            echo "Error: No release APK found in app/build/outputs/apk/release"
-            exit 1
-          fi
-          echo "Release APK found at: $RELEASE_APK"
-          cp "$RELEASE_APK" "app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk"
-
-      - name: Upload Release APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyDocuVault-v${{ steps.version.outputs.version_name }}
-          path: app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
-
-      - name: Upload Debug APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyDocuVault-v${{ steps.version.outputs.version_name }}-debug
-          path: app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
-          if-no-files-found: error
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version_name }}
-          name: MyDocuVault v${{ steps.version.outputs.version_name }}
-          body: |
-            ## MyDocuVault v${{ steps.version.outputs.version_name }}
-
-            ### What's New in v${{ steps.version.outputs.version_name }}
-            - ⚡ **Direct "Open with MyDocu" (No PIN & No Auto-Save)**: Selecting "Open with MyDocu" in WhatsApp, Telegram, or Files opens documents directly in the viewer with zero PIN prompt and without force-saving; users can optionally save to vault or share from the top app bar / 3-dots menu
-            - 🎯 **Enhanced Responsiveness & Gestures**: Added double-tap to zoom, smoother image panning/pinching, instant loading, and streamlined rendering
-            - 🏷️ **Preserved Exact File Names**: Fixed file name changing issues across imports, disk storage, renaming, and sharing with clean duplicate handling (`file (1).pdf` instead of timestamps)
-            - 📁 **Disk Folder & File Sync**: Files saved or moved inside folders are now instantly written to disk and scanned via MediaScanner so they immediately show up in file explorer apps
-            - 📂 **Full Storage Permissions**: Added Scoped Storage and legacy external storage permissions for reliable document saving
-            - 🔍 **Full Vault Search**: Fast real-time search across all folders and documents by name, notes, and type (PDF, Images, Word/Docs)
-            - 🚀 **In-App Update Prompt**: Automatic update prompt on HomeScreen and improved update checker headers
-            - 📤 **Preserved File Names on Sharing**: Fixed file name preservation when sending via WhatsApp and other apps
-            - Version ${{ steps.version.outputs.version_name }} (build ${{ steps.version.outputs.version_code }})
-
-            ### Downloads
-            | APK | Description |
-            |-----|-------------|
-            | `MyDocuVault-v${{ steps.version.outputs.version_name }}.apk` | Release build (use this to install/update) |
-            | `MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk` | Debug build (for testing) |
-
-            ### Installation
-            Download and install the APK on your Android device (API 26+).
-            Enable **Install from unknown sources** in your device settings if prompted.
-
-            ---
-            Made with ❤️ by Mohd Zaheer Uddin
-          draft: false
-          prerelease: false
-          files: |
-            app/build/outputs/apk/release/MyDocuVault-v${{ steps.version.outputs.version_name }}.apk
-            app/build/outputs/apk/debug/MyDocuVault-v${{ steps.version.outputs.version_name }}-debug.apk
+          test -f "$KEYSTORE_FILE"
+          ./gradlew testDebugUnitTest assembleRelease --no-daemon
+      - name: Verify signature and publish
+        if: steps.version.outputs.publish == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          apk="MyDocuVault-$TAG.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          signer="$ANDROID_HOME/build-tools/34.0.0/apksigner"
+          "$signer" verify --print-certs "$apk" > signing-certificate.txt
+          grep -Fx "Signer #1 certificate SHA-256 digest: dac0d06970b08037a30773fea0d58d8494750fec294a357c543d1cf70d5af5b5" signing-certificate.txt
+          sha256sum "$apk" > "$apk.sha256"
+          flags=()
+          if [[ "$PRERELEASE" == true ]]; then flags+=(--prerelease); fi
+          gh release create "$TAG" "$apk" "$apk.sha256" --target "$GITHUB_SHA" \
+            --title "MyDocuVault $TAG" --notes-file "releases/$TAG.md" "${flags[@]}"

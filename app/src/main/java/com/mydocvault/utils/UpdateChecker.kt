@@ -39,24 +39,17 @@ class UpdateChecker @Inject constructor(
                 val notes = json.optString("body")
                 val assets = json.optJSONArray("assets")
                 var apkUrl = ""
-                var debugApkUrl = ""
                 if (assets != null) {
                     for (i in 0 until assets.length()) {
                         val asset = assets.getJSONObject(i)
                         val name = asset.optString("name")
                         val urlStr = asset.optString("browser_download_url")
-                        if (name.endsWith(".apk")) {
-                            if (!name.endsWith("-debug.apk")) {
-                                apkUrl = urlStr
-                                break
-                            } else if (debugApkUrl.isBlank()) {
-                                debugApkUrl = urlStr
-                            }
+                        if (name.equals("MyDocuVault-$tagName.apk", ignoreCase = true)) {
+                            apkUrl = urlStr
+                            break
                         }
                     }
                 }
-                // Fall back to debug APK if no release APK is published
-                if (apkUrl.isBlank()) apkUrl = debugApkUrl
                 if (apkUrl.isBlank()) return@withContext null
                 if (!VersionComparator.isNewerVersion(tagName, currentVersion)) return@withContext null
                 UpdateInfo(tagName, notes, apkUrl)

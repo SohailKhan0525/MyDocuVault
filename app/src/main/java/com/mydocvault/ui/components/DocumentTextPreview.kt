@@ -1,139 +1,76 @@
 package com.mydocvault.ui.components
 
-import android.graphics.Color
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.TextView
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.mydocvault.utils.FileType
 import io.noties.markwon.Markwon
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 @Composable
-fun DocumentTextPreview(
-    text: String,
-    fileName: String,
-    fileType: FileType,
-    modifier: Modifier = Modifier
-) {
-    val isMarkdown = fileName.substringAfterLast('.', "").equals("md", ignoreCase = true)
-    val isCode = fileType == FileType.CODE && !isMarkdown
-    val sections = text.split("\u0000").filter { it.isNotBlank() }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        PreviewHeader(fileName = fileName, fileType = fileType, itemCount = sections.size)
-        if (isMarkdown) {
-            MarkdownBlock(text = text)
-        } else if (isCode) {
-            CodeBlock(text = text)
-        } else {
-            sections.forEachIndexed { index, section ->
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        if (sections.size > 1) {
-                            Text(
-                                text = section.substringBefore('\n').takeIf { it.isNotBlank() }
-                                    ?: "Section ${index + 1}",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Text(
-                            text = if (sections.size > 1) section.substringAfter('\n', "") else section,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+internal fun SourceReader(file: File, markdown: Boolean, onOpen: () -> Unit) {
+    var text by remember(file) { mutableStateOf<String?>(null) }
+    var error by remember(file) { mutableStateOf<String?>(null) }
+    LaunchedEffect(file) {
+        try {
+            text = withContext(Dispatchers.IO) {
+                require(file.length() <= 512 * 1024) { "This file is too large for the source reader." }
+                file.readText()
+            }
+        } catch (e: java.io.IOException) {
+            error = "The file could not be read."
+        } catch (e: IllegalArgumentException) {
+            error = e.message
+        }
+    }
+    val content = text
+    when {
+        error != null -> ReaderMessage(error.orEmpty(), "Choose another app", onOpen)
+        content == null -> ReaderLoading()
+        content.isEmpty() -> ReaderMessage("This file is empty.")
+        markdown -> {
+            val context = LocalContext.current
+            val renderer = remember(context) { Markwon.create(context) }
+            val foreground = MaterialTheme.colorScheme.onSurface.toArgb()
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+                AndroidView(factory = { TextView(it).apply { setTextIsSelectable(true) } }, update = {
+                    it.setTextColor(foreground)
+                    renderer.setMarkdown(it, content)
+                })
+            }
+        }
+        else -> AndroidView(modifier = Modifier.fillMaxSize(), factory = { context ->
+            WebView(context).apply {
+                settings.apply {
+                    javaScriptEnabled = true
+                    allowContentAccess = false
+                    allowFileAccess = false
+                    blockNetworkLoads = true
+                    builtInZoomControls = true
+                    displayZoomControls = false
+                }
+                webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String) {
+                        if (url != "file:///android_asset/source/index.html") return
+                        // The document is only assigned to a text node. It is never parsed as HTML or script.
+                        val value = JSONObject.quote(content)
+                        view.evaluateJavascript("var e=document.getElementById('source'); e.textContent=$value; hljs.highlightElement(e)", null)
                     }
                 }
+                loadUrl("file:///android_asset/source/index.html")
             }
-        }
+        }, onRelease = { it.destroy() })
     }
-}
-
-@Composable
-private fun PreviewHeader(fileName: String, fileType: FileType, itemCount: Int) {
-    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-        Text(
-            text = fileName,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = "${fileType.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }}${if (itemCount > 1) " • $itemCount sections" else ""}",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun CodeBlock(text: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Text(
-            text = text.ifBlank { "This file is empty." },
-            modifier = Modifier.padding(14.dp),
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun MarkdownBlock(text: String) {
-    val context = LocalContext.current
-    val background = MaterialTheme.colorScheme.surface.toArgb()
-    val foreground = MaterialTheme.colorScheme.onSurface.toArgb()
-    AndroidView(
-        modifier = Modifier.fillMaxWidth().background(
-            color = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(12.dp)
-        ),
-        factory = {
-            TextView(context).apply {
-                setTextColor(foreground)
-                setBackgroundColor(Color.TRANSPARENT)
-                setPadding(16, 12, 16, 12)
-                setTextIsSelectable(true)
-                val markwon = Markwon.builder(context).build()
-                tag = markwon
-            }
-        },
-        update = { view ->
-            view.setTextColor(foreground)
-            view.setBackgroundColor(background)
-            (view.tag as Markwon).setMarkdown(view, text.ifBlank { "This file is empty." })
-        }
-    )
 }

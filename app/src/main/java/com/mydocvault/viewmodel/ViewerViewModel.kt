@@ -16,8 +16,18 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ViewerViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
     private val repository: VaultRepository
 ) : ViewModel() {
+
+    val previewDirectory = java.io.File(context.cacheDir, "temp_preview/${java.util.UUID.randomUUID()}").apply {
+        mkdirs()
+    }
+
+    override fun onCleared() {
+        previewDirectory.deleteRecursively()
+        super.onCleared()
+    }
 
     val folders: StateFlow<List<FolderEntity>> = repository.allFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

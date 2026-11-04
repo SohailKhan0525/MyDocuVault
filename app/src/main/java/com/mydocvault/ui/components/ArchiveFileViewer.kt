@@ -41,8 +41,10 @@ fun ArchiveFileViewer(filePath: String) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text("Archive contents", style = MaterialTheme.typography.titleMedium)
+        if (entries.isEmpty()) Text("This archive is empty.")
+        if (entries.size > 1000) Text("Showing the first 1,000 entries.")
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(entries.orEmpty()) { entry ->
+            items(entries.take(1000)) { entry ->
                 ListItem(
                     headlineContent = { Text(entry, maxLines = 2) },
                     leadingContent = {
@@ -60,7 +62,7 @@ private fun listArchiveEntries(file: File): List<String> = runCatching {
             SevenZFile(file).use { archive ->
                 buildList<String> {
                     var entry = archive.nextEntry
-                    while (entry != null) {
+                    while (entry != null && size < 1001) {
                         add(entry.name)
                         entry = archive.nextEntry
                     }
@@ -82,7 +84,7 @@ private fun listArchiveEntries(file: File): List<String> = runCatching {
                 TarArchiveInputStream(archiveSource).use { archive ->
                     buildList<String> {
                         var entry = archive.nextEntry
-                        while (entry != null) {
+                        while (entry != null && size < 1001) {
                             add(entry.name)
                             entry = archive.nextEntry
                         }
@@ -90,6 +92,6 @@ private fun listArchiveEntries(file: File): List<String> = runCatching {
                 }
             }
         }
-        else -> ZipFile(file).use { zip -> zip.entries().asSequence().map { it.name }.toList() }
+        else -> ZipFile(file).use { zip -> zip.entries().asSequence().take(1001).map { it.name }.toList() }
     }
 }.getOrElse { listOf("Unable to read this archive: ${it.message ?: "unsupported format"}") }

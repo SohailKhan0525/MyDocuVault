@@ -1,121 +1,99 @@
 package com.mydocvault.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.mydocvault.R
 import com.mydocvault.ui.navigation.NavRoutes
 import com.mydocvault.viewmodel.AuthViewModel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private data class GuidePage(val plate: Int, val title: Int, val body: Int)
+private val guide = listOf(
+    GuidePage(R.drawable.plate_filing, R.string.guide_file_title, R.string.guide_file_body),
+    GuidePage(R.drawable.plate_reader, R.string.guide_read_title, R.string.guide_read_body),
+    GuidePage(R.drawable.plate_lock, R.string.guide_lock_title, R.string.guide_lock_body)
+)
 
 @Composable
-fun OnboardingScreen(
-    navController: NavController,
-    viewModel: AuthViewModel = hiltViewModel()
-) {
-    var step by remember { mutableStateOf(0) }
-    val steps = listOf(
-        OnboardingStep("Welcome to MyDocuVault", "Your secure, offline personal vault for sensitive documents."),
-        OnboardingStep("Complete Privacy", "Everything stays on your device. We never upload your files to the cloud."),
-        OnboardingStep("Biometric Security", "Protect your vault with your fingerprint or a secure PIN.")
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Spacer(modifier = Modifier.weight(1f))
-
-        AnimatedVisibility(
-            visible = true,
-            enter = fadeIn(tween(1000)) + slideInVertically(tween(1000), initialOffsetY = { 100 })
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Surface(
-                    modifier = Modifier.size(120.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    // Optional icon or image
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-                Text(
-                    text = steps[step].title,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = steps[step].description,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            steps.forEachIndexed { index, _ ->
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(if (index == step) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = {
-                if (step < steps.size - 1) {
-                    step++
-                } else {
+fun OnboardingScreen(navController: NavController, viewModel: AuthViewModel = hiltViewModel()) {
+    var step by rememberSaveable { mutableIntStateOf(0) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val finish = {
+        if (!busy) {
+            busy = true
+            scope.launch {
+                try {
                     viewModel.completeOnboarding()
                     navController.navigate("${NavRoutes.Pin}?mode=create") {
-                        popUpTo(NavRoutes.Splash) { inclusive = true }
+                        popUpTo(NavRoutes.Onboarding) { inclusive = true }
+                    }
+                } finally {
+                    busy = false
+                }
+            }
+        }
+    }
+    BackHandler(step > 0 && !busy) { step-- }
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding(),
+        contentAlignment = Alignment.Center) {
+        Column(Modifier.widthIn(max = 560.dp).fillMaxSize().padding(horizontal = 24.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("MyDocuVault", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                if (step < guide.lastIndex) TextButton(onClick = finish, enabled = !busy) { Text(stringResource(R.string.guide_skip)) }
+                else Spacer(Modifier.height(48.dp))
+            }
+            HorizontalDivider()
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
+                AnimatedContent(targetState = step, label = "Guide page",
+                    transitionSpec = {
+                        val direction = if (targetState > initialState) 1 else -1
+                        (fadeIn(tween(200)) + slideInHorizontally(tween(240)) { direction * it / 14 })
+                            .togetherWith(fadeOut(tween(120)))
+                    }) { index ->
+                    val page = guide[index]
+                    Column(Modifier.fillMaxWidth().padding(vertical = 20.dp)) {
+                        Image(painterResource(page.plate), contentDescription = null,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(256f / 144f))
+                        Spacer(Modifier.height(24.dp))
+                        Text(stringResource(R.string.guide_step, index + 1, guide.size),
+                            style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(8.dp))
+                        Text(stringResource(page.title), style = MaterialTheme.typography.displaySmall.copy(fontFamily = FontFamily.Serif),
+                            modifier = Modifier.semantics { heading() })
+                        Spacer(Modifier.height(10.dp))
+                        Text(stringResource(page.body), style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Text(if (step < steps.size - 1) "Next" else "Get Started", fontSize = 18.sp)
+            }
+            HorizontalDivider()
+            Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (step > 0) TextButton(onClick = { step-- }, enabled = !busy) { Text(stringResource(R.string.guide_back)) }
+                Spacer(Modifier.weight(1f))
+                Button(onClick = { if (step < guide.lastIndex) step++ else finish() }, enabled = !busy) {
+                    Text(stringResource(if (step == guide.lastIndex) R.string.guide_pin else R.string.guide_next))
+                }
+            }
         }
     }
 }
-
-data class OnboardingStep(val title: String, val description: String)
