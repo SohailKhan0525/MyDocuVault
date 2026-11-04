@@ -8,6 +8,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -238,7 +240,8 @@ fun FolderDetailScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)
+            .wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 840.dp).fillMaxWidth()) {
             if (rawFolders.isEmpty() && rawDocuments.isEmpty()) {
                 EmptyState(
                     title = "Empty folder",

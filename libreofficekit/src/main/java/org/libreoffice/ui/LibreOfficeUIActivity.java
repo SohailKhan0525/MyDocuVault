@@ -25,6 +25,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.appcompat.app.ActionBar;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -120,6 +121,9 @@ public class LibreOfficeUIActivity extends AppCompatActivity implements View.OnC
     private Animation fabOpenAnimation;
     private Animation fabCloseAnimation;
     private boolean isFabMenuOpen = false;
+    private final OnBackPressedCallback closeMenu = new OnBackPressedCallback(false) {
+        @Override public void handleOnBackPressed() { collapseFabMenu(); }
+    };
     private FloatingActionButton editFAB;
     private FloatingActionButton writerFAB;
     private FloatingActionButton drawFAB;
@@ -133,6 +137,7 @@ public class LibreOfficeUIActivity extends AppCompatActivity implements View.OnC
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getOnBackPressedDispatcher().addCallback(this, closeMenu);
 
         // init UI
         createUI();
@@ -215,6 +220,7 @@ public class LibreOfficeUIActivity extends AppCompatActivity implements View.OnC
         drawFAB.setClickable(true);
         calcFAB.setClickable(true);
         isFabMenuOpen = true;
+        closeMenu.setEnabled(true);
     }
 
     private void collapseFabMenu() {
@@ -228,15 +234,7 @@ public class LibreOfficeUIActivity extends AppCompatActivity implements View.OnC
         drawFAB.setClickable(false);
         calcFAB.setClickable(false);
         isFabMenuOpen = false;
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (isFabMenuOpen) {
-            collapseFabMenu();
-        } else {
-            super.onBackPressed();
-        }
+        closeMenu.setEnabled(false);
     }
 
     @Override

@@ -64,10 +64,10 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 fun PinScreen(
     navController: NavController,
+    mode: String,
     viewModel: AuthViewModel = hiltViewModel(),
     initialDocumentId: Long? = null
 ) {
-    val mode = navController.currentBackStackEntry?.arguments?.getString("mode") ?: "unlock"
     val biometricEnabled by viewModel.biometricEnabled.collectAsState()
     val savedPin by viewModel.pinState.collectAsState()
     val context = LocalContext.current
@@ -96,7 +96,7 @@ fun PinScreen(
                     onSuccess = {
                         val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
                         navController.navigate(destination) {
-                            popUpTo(NavRoutes.Pin) { inclusive = true }
+                            popUpTo(NavRoutes.PinPattern) { inclusive = true }
                         }
                     },
                     onError = { message -> error = message }
@@ -268,7 +268,7 @@ fun PinScreen(
                                         viewModel.setPin(pin)
                                         val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
                                         navController.navigate(destination) {
-                                            popUpTo(NavRoutes.Pin) { inclusive = true }
+                                            popUpTo(NavRoutes.PinPattern) { inclusive = true }
                                         }
                                     } catch (_: Exception) {
                                         error = "Could not secure the PIN on this device. Please try again."
@@ -279,7 +279,7 @@ fun PinScreen(
                                 if (!current.isNullOrBlank() && pin == current) {
                                     val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
                                     navController.navigate(destination) {
-                                        popUpTo(NavRoutes.Pin) { inclusive = true }
+                                        popUpTo(NavRoutes.PinPattern) { inclusive = true }
                                     }
                                 } else {
                                     error = "Incorrect PIN"
@@ -314,7 +314,7 @@ fun PinScreen(
                                         onSuccess = {
                                             val destination = if (initialDocumentId != null) "${NavRoutes.Document}/$initialDocumentId" else NavRoutes.Home
                                             navController.navigate(destination) {
-                                                popUpTo(NavRoutes.Pin) { inclusive = true }
+                                                popUpTo(NavRoutes.PinPattern) { inclusive = true }
                                             }
                                         },
                                         onError = { message -> error = message }

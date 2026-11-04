@@ -13,6 +13,7 @@
 
     <application
         android:name=".MyDocVaultApp"
+        android:enableOnBackInvokedCallback="true"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:installLocation="internalOnly"

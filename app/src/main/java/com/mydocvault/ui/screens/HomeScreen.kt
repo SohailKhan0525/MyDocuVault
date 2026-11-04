@@ -13,6 +13,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -251,7 +253,8 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding)
+            .wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 840.dp).fillMaxWidth()) {
             AnimatedVisibility(
                 visible = !isSearchActive,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 5 }),

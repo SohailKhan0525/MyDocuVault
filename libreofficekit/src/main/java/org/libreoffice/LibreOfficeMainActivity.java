@@ -24,6 +24,7 @@ import android.widget.ListView;
 import android.widget.TabHost;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -132,13 +133,17 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
     private boolean isKeyboardOpen = false;
     private boolean isFormattingToolbarOpen = false;
     private boolean isSearchToolbarOpen = false;
-    private static boolean isDocumentChanged = false;
+    private static volatile boolean isDocumentChanged = false;
+    private final OnBackPressedCallback confirmUnsaved = new OnBackPressedCallback(false) {
+        @Override public void handleOnBackPressed() { showUnsavedChangesDialog(); }
+    };
     private boolean isUNOCommandsToolbarOpen = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.w(LOGTAG, "onCreate..");
         super.onCreate(savedInstanceState);
+        getOnBackPressedDispatcher().addCallback(this, confirmUnsaved);
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
         updatePreferences();
         PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
@@ -151,7 +156,7 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         toolbarTop.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                finish();
+                getOnBackPressedDispatcher().onBackPressed();
             }
         });
 
@@ -166,6 +171,7 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         }
         readerThread = new LOKitThread(this);
         activeViewer = this;
+        setDocumentChanged(false);
         readerThread.start();
 
         mLayerClient = new GeckoLayerClient(this);
@@ -526,28 +532,21 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        if (!isDocumentChanged) {
-            super.onBackPressed();
-            return;
-        }
-
-
+    private void showUnsavedChangesDialog() {
         DialogInterface.OnClickListener dialogClickListener = (dialog, which) -> {
             switch (which) {
                 case DialogInterface.BUTTON_POSITIVE:
                     mTileProvider.saveDocument();
-                    isDocumentChanged = false;
-                    onBackPressed();
+                    setDocumentChanged(false);
+                    finish();
                     break;
                 case DialogInterface.BUTTON_NEGATIVE:
                     //CANCEL
                     break;
                 case DialogInterface.BUTTON_NEUTRAL:
                     //NO
-                    isDocumentChanged = false;
-                    onBackPressed();
+                    setDocumentChanged(false);
+                    finish();
                     break;
             }
         };
@@ -853,6 +852,10 @@ public class LibreOfficeMainActivity extends AppCompatActivity implements Shared
 
     public static void setDocumentChanged(boolean changed) {
         isDocumentChanged = changed;
+        LibreOfficeMainActivity viewer = activeViewer;
+        if (viewer != null) viewer.runOnUiThread(() -> {
+            if (activeViewer == viewer) viewer.confirmUnsaved.setEnabled(isDocumentChanged && !isReadOnlyMode());
+        });
     }
 
     private class DocumentPartClickListener implements android.widget.AdapterView.OnItemClickListener {

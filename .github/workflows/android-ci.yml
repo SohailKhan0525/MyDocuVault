@@ -1,7 +1,7 @@
 name: Android CI
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
     branches: [main]
 
@@ -9,7 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  reader:
+  build:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,18 +19,55 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - name: Build and test
+      - uses: ./.github/actions/office-packages
+      - name: Build APKs and run unit tests
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: device-test-apks
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+  device:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: device-test-apks
+          path: apks
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Open real documents in the packaged reader
+      - name: Test document rendering and navigation
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 35
           arch: x86_64
-          disable-animations: true
-          disk-size: 6G
-          script: ./gradlew connectedDebugAndroidTest --no-daemon
+          profile: pixel_2
+          disable-animations: false
+          disk-size: 3G
+          script: |
+            adb shell settings put global device_provisioned 1
+            adb shell settings put secure user_setup_complete 1
+            adb shell wm dismiss-keyguard
+            adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural
+            adb shell settings put global enable_back_animation 1
+            adb install -t apks/debug/app-debug.apk
+            adb install -t apks/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w -r com.mydocvault.test/androidx.test.runner.AndroidJUnitRunner | tee device-results.txt
+            grep -Eq '^OK \([1-9][0-9]* tests?\)' device-results.txt
+      - name: Upload device results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-device-test-results
+          path: device-results.txt
+          if-no-files-found: ignore

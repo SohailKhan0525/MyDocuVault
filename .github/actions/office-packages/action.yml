@@ -1,0 +1,44 @@
+name: Prepare LibreOffice packages
+description: Cache and verify the pinned native inputs before Gradle starts
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v4
+      with:
+        path: .gradle/office-packages
+        key: office-android-${{ hashFiles('libreofficekit/runtime-packages.tsv') }}
+    - shell: bash
+      run: |
+        set -euo pipefail
+        dest="$GITHUB_WORKSPACE/.gradle/office-packages"
+        echo "OFFICE_PACKAGE_DIR=$dest" >> "$GITHUB_ENV"
+        mkdir -p "$dest"
+        fetch() {
+          local apk="org.documentfoundation.libreoffice_$1.apk" digest="$2" base
+          if [[ -f "$dest/$apk" ]] && (cd "$dest" && echo "$digest  $apk" | sha256sum --check --status); then
+            return 0
+          fi
+          for base in https://mirror.fcix.net/fdroid/repo https://ftp.gwdg.de/pub/android/fdroid/repo \
+                      https://f-droid.org/repo https://f-droid.org/archive; do
+            echo "Fetching $apk from $base"
+            if curl --fail --location --silent --show-error --connect-timeout 12 --max-time 360 --continue-at - \
+                    --speed-limit 8192 --speed-time 30 "$base/$apk" -o "$dest/$apk.part"; then
+              if (cd "$dest" && echo "$digest  $apk.part" | sha256sum --check --status); then
+                mv "$dest/$apk.part" "$dest/$apk"
+                return 0
+              fi
+              rm -f "$dest/$apk.part"
+            fi
+          done
+          rm -f "$dest/$apk.part"
+          echo "::error::Could not obtain a verified copy of $apk"
+          return 1
+        }
+        pids=()
+        while read -r abi code sha; do
+          fetch "$code" "$sha" &
+          pids+=("$!")
+        done < libreofficekit/runtime-packages.tsv
+        failed=0
+        for pid in "${pids[@]}"; do wait "$pid" || failed=1; done
+        exit "$failed"

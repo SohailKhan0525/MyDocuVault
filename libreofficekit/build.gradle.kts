@@ -24,13 +24,12 @@ android {
 
 // F-Droid builds all four APKs from the same LibreOffice 26.2.6.3 source.
 // Import only the engine, its sibling libraries, and its matching configuration.
-val engines = mapOf(
-    "arm64-v8a" to (131 to "751ac3836890b79a56801bf6d9a2788cda3761ab5131a4f0b6abfbad822bb475"),
-    "armeabi-v7a" to (130 to "1b8ede653604d7a2df9a090cd333942d115132f4ed19bbb84b3ee1d17b5dcf37"),
-    "x86_64" to (129 to "cfaf9eea5fd695c449e92eb10cc0b1617ec51d068345068cea9b7e1c67968df5"),
-    "x86" to (128 to "44d41200a07782da26e72a112cf0f4461a42d93c679c3e1a71b0e8bb4006fba6")
-)
+val engines = file("runtime-packages.tsv").readLines().associate { line ->
+    val (abi, code, sha256) = line.split('\t')
+    abi to (code.toInt() to sha256)
+}
 
+val cachedPackages = providers.environmentVariable("OFFICE_PACKAGE_DIR")
 val runtimeDirectory = layout.buildDirectory.dir("generated/office")
 val prepareOfficeRuntime = tasks.register<Sync>("prepareOfficeRuntime") {
     into(runtimeDirectory)
@@ -53,10 +52,12 @@ for ((abi, release) in engines) {
             destination.parentFile.mkdirs()
             val part = File.createTempFile("download-", ".part", destination.parentFile)
             try {
-                // F-Droid periodically moves older published versions to its archive.
-                val urls = listOf("repo", "archive").map { URI("https://f-droid.org/$it/$filename").toURL() }
-                val input = try { urls.first().openStream() } catch (_: FileNotFoundException) {
-                    urls.last().openStream()
+                val input = cachedPackages.orNull?.let { File(it, filename).inputStream() } ?: run {
+                    // F-Droid periodically moves older published versions to its archive.
+                    val urls = listOf("repo", "archive").map { URI("https://f-droid.org/$it/$filename").toURL() }
+                    try { urls.first().openStream() } catch (_: FileNotFoundException) {
+                        urls.last().openStream()
+                    }
                 }
                 input.use { source -> part.outputStream().use { source.copyTo(it) } }
                 check(checksum(part) == sha256) {

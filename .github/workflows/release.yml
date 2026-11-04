@@ -32,6 +32,8 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
+      - uses: ./.github/actions/office-packages
+        if: steps.version.outputs.publish == 'true'
       - name: Test and assemble signed APK
         if: steps.version.outputs.publish == 'true'
         run: |
