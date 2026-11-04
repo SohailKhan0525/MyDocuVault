@@ -44,8 +44,8 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 24
-        versionName = "1.10.0"
+        versionCode = 25
+        versionName = "1.11.0"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -145,6 +145,7 @@ dependencies {
 
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.noties.markwon:core:4.6.2")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

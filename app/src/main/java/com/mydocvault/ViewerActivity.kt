@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.mydocvault.data.entity.FolderEntity
 import com.mydocvault.ui.components.PdfViewer
+import com.mydocvault.ui.components.DocumentTextPreview
 import com.mydocvault.ui.components.RenameDialog
 import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.ui.theme.MyDocVaultTheme
@@ -73,19 +74,6 @@ class ViewerActivity : ComponentActivity() {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun TextPreview(text: String) {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
-    ) {
-        Text(
-            text = text.ifBlank { "No text preview available for this file." },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
     }
 }
 
@@ -388,7 +376,11 @@ fun ExternalViewerScreen(
                                 onOpen = { openExternal(context, uri, tempFile, displayName) }
                             )
                         } else {
-                            TextPreview(textPreview)
+                            DocumentTextPreview(
+                                text = textPreview,
+                                fileName = displayName,
+                                fileType = fileType
+                            )
                         }
                     }
                     FileType.SPREADSHEET, FileType.PRESENTATION -> {
@@ -398,7 +390,11 @@ fun ExternalViewerScreen(
                                 onOpen = { openExternal(context, uri, tempFile, displayName) }
                             )
                         } else {
-                            TextPreview(officeText)
+                            DocumentTextPreview(
+                                text = officeText,
+                                fileName = displayName,
+                                fileType = fileType
+                            )
                         }
                     }
                     else -> {

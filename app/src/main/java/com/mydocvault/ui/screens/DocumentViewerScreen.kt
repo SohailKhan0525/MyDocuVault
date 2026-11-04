@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mydocvault.ui.components.PdfViewer
+import com.mydocvault.ui.components.DocumentTextPreview
 import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.utils.DocxTextExtractor
 import com.mydocvault.utils.FileType
@@ -79,6 +80,7 @@ fun DocumentViewerScreen(
     val document by viewModel.document.collectAsState()
     val folders by viewModel.folders.collectAsState()
     val context = LocalContext.current
+    val currentFileType = document?.let { FileType.fromRaw(it.fileType) }
 
     var showSheet by remember { mutableStateOf(false) }
     var docxText by remember { mutableStateOf("") }
@@ -212,15 +214,11 @@ fun DocumentViewerScreen(
                                 }
                             }
                         } else {
-                            Column(
-                                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
-                            ) {
-                                Text(
-                                    text = previewText.ifBlank { "No text preview available for this file." },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                            }
+                            DocumentTextPreview(
+                                text = previewText,
+                                fileName = doc.name,
+                                fileType = currentFileType ?: FileType.OTHER
+                            )
                         }
                     }
                     else -> {
