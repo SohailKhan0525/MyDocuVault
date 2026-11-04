@@ -14,20 +14,20 @@ import java.io.FileOutputStream
 
 fun getDocumentDisplayName(context: Context, uri: Uri): String {
     val resolver = context.contentResolver
-    try {
-        resolver.query(uri, null, null, null, null)?.use { cursor ->
-            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (nameIndex >= 0 && cursor.moveToFirst()) {
-                cursor.getString(nameIndex)?.takeIf { it.isNotBlank() }?.let { return it }
-            }
+    val providerName = runCatching {
+        resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
         }
-    } catch (_: Exception) {
-        // Some third-party document providers reject metadata queries; fall back safely.
-    }
-    val fallback = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
-    if (fallback != null) return fallback
-    val ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(runCatching { resolver.getType(uri) }.getOrNull()) ?: "bin"
-    return "Document_" + System.currentTimeMillis() + ".$ext"
+    }.getOrNull()
+    val name = (providerName ?: uri.lastPathSegment ?: "Document")
+        .substringAfterLast('/').substringAfterLast('\\').filterNot { it.isISOControl() }
+        .trim().trim('.').ifBlank { "Document" }
+    if (name.substringAfterLast('.', "").isNotBlank()) return name
+    val mime = runCatching { resolver.getType(uri) }.getOrNull()
+    val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mime)
+    return if (extension.isNullOrBlank()) name else "$name.$extension"
+
 }
 
 fun getMimeTypeForFileName(name: String): String {
@@ -68,11 +68,32 @@ fun openDocumentExternally(context: Context, filePath: String, displayName: Stri
             setDataAndType(uri, getMimeTypeForFileName(displayName))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+
         context.startActivity(Intent.createChooser(intent, "Open with"))
         true
     } catch (_: Exception) {
         false
     }
+}
+
+fun openOfficeInLibreOffice(context: Context, filePath: String, displayName: String): Boolean {
+    return runCatching {
+        val file = File(filePath)
+        if (!file.isFile || !file.canRead()) return false
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val intent = Intent(context, org.libreoffice.LibreOfficeMainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            setDataAndType(uri, getMimeTypeForFileName(displayName))
+            putExtra(Intent.EXTRA_TITLE, displayName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(intent)
+        true
+    }.getOrElse { false }
 }
 
 fun shareDocument(context: Context, document: DocumentEntity) {

@@ -41,7 +41,6 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -53,15 +52,12 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
@@ -80,7 +76,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -216,15 +211,10 @@ fun HomeScreen(
                     title = {
                         Column {
                             Text(
-                                text = "MyDocVault",
+                                text = "MyDocuVault",
                                 style = MaterialTheme.typography.titleLarge
                             )
-                            val totalItems = folders.size + rootDocuments.size
-                            Text(
-                                text = "$totalItems item${if (totalItems != 1) "s" else ""}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+
                         }
                     },
                     actions = {
@@ -386,8 +376,8 @@ fun HomeScreen(
                 if (folders.isEmpty() && rootDocuments.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         EmptyState(
-                            title = "No folders or files yet",
-                            subtitle = "Tap + to create a vault folder or import files",
+                            title = "Add your first file",
+                            subtitle = "Use the Add button to import a document or make a folder.",
                             icon = Icons.Default.Folder
                         )
                     }
@@ -822,106 +812,23 @@ private fun BottomSheetItem(
 }
 
 @Composable
-private fun VaultOverviewCard(
-    folderCount: Int,
-    documentCount: Int
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .animateContentSize(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+private fun VaultOverviewCard(folderCount: Int, documentCount: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.secondary,
-                            MaterialTheme.colorScheme.tertiary
-                        )
-                    )
-                )
-                .padding(horizontal = 22.dp, vertical = 22.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f),
-                        modifier = Modifier.size(42.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(21.dp)
-                            )
-                        }
-                    }
-                    Column {
-                        Text(
-                            text = "MY PRIVATE VAULT",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
-                        )
-                        Text(
-                            text = "Your space, in order.",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-                Text(
-                    text = "One calm place for every important file.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.13f)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 11.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "$folderCount folders",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Text(
-                            text = "•",
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = "$documentCount files",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            imageVector = Icons.Default.Folder,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
+        androidx.compose.foundation.Image(
+            androidx.compose.ui.res.painterResource(com.mydocvault.R.drawable.plate_filing),
+            contentDescription = null,
+            modifier = Modifier.width(96.dp).height(60.dp)
+        )
+        Column {
+            Text("Filing cabinet", style = MaterialTheme.typography.headlineSmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif))
+            Text("$folderCount ${if (folderCount == 1) "folder" else "folders"} · $documentCount loose ${if (documentCount == 1) "file" else "files"}",
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
 }
-

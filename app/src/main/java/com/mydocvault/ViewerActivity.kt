@@ -11,9 +11,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -26,9 +24,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.mydocvault.data.entity.FolderEntity
-import com.mydocvault.ui.components.PdfViewer
+import com.mydocvault.ui.components.FileReader
 import com.mydocvault.ui.components.RenameDialog
-import com.mydocvault.ui.components.ZoomableImage
 import com.mydocvault.ui.theme.MyDocVaultTheme
 import com.mydocvault.utils.*
 import com.mydocvault.viewmodel.ViewerViewModel
@@ -55,7 +52,16 @@ class ViewerActivity : ComponentActivity() {
             intent.data
         }
 
-        if (uri == null) {
+        val allowed = when (uri?.scheme) {
+            "content" -> uri.authority?.substringAfterLast('@') != "$packageName.fileprovider"
+            "file" -> runCatching {
+                val external = android.os.Environment.getExternalStorageDirectory().canonicalPath + File.separator
+                val path = File(requireNotNull(uri.path)).canonicalPath
+                path.startsWith(external) && !path.startsWith(external + "Android/")
+            }.getOrDefault(false)
+            else -> false
+        }
+        if (uri == null || !allowed) {
             Toast.makeText(this, "No file to view", Toast.LENGTH_SHORT).show()
             finish()
             return
@@ -91,9 +97,6 @@ fun ExternalViewerScreen(
     var tempFile by remember { mutableStateOf<File?>(null) }
     var previewError by remember { mutableStateOf<String?>(null) }
     var isLoadingTemp by remember { mutableStateOf(true) }
-    var docxText by remember { mutableStateOf("") }
-    var docxError by remember { mutableStateOf(false) }
-
     var showMenu by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedFolder by remember { mutableStateOf<FolderEntity?>(null) }
@@ -108,9 +111,7 @@ fun ExternalViewerScreen(
         previewError = null
         try {
             val file = withContext(Dispatchers.IO) {
-                val tempDir = File(context.cacheDir, "temp_preview").apply {
-                    if (!exists() && !mkdirs()) error("Could not prepare temporary preview storage.")
-                }.canonicalFile
+                val tempDir = viewModel.previewDirectory.canonicalFile
                 val targetName = displayName
                     .substringAfterLast('/')
                     .substringAfterLast('\\')
@@ -121,6 +122,7 @@ fun ExternalViewerScreen(
                 val file = File(tempDir, targetName).canonicalFile
                 require(file.parentFile == tempDir) { "Invalid preview filename." }
 
+                if (file.isFile) return@withContext file
                 try {
                     val input = context.contentResolver.openInputStream(uri)
                         ?: error("The selected file could not be opened.")
@@ -138,14 +140,8 @@ fun ExternalViewerScreen(
             }
             tempFile = file
 
-            if (fileType == FileType.DOCX) {
-                try {
-                    docxText = withContext(Dispatchers.IO) { DocxTextExtractor.extractText(file) }
-                    docxError = false
-                } catch (_: Exception) {
-                    docxError = true
-                }
-            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             previewError = "Could not load this file. Check that it is accessible and try again."
         } finally {
@@ -264,102 +260,7 @@ fun ExternalViewerScreen(
                 }
             } else {
                 val file = tempFile
-                when (fileType) {
-                    FileType.IMAGE -> {
-                        ZoomableImage(path = file?.absolutePath ?: "")
-                    }
-                    FileType.PDF -> {
-                        if (file != null && file.exists()) {
-                            PdfViewer(filePath = file.absolutePath)
-                        } else {
-                            Text(
-                                text = "Unable to load PDF",
-                                modifier = Modifier.align(Alignment.Center),
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                    FileType.DOCX -> {
-                        if (docxError) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp)
-                                    .align(Alignment.Center),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Description,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                                Text(
-                                    text = "Unable to extract text from this Word document.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        } else {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(16.dp)
-                            ) {
-                                Text(
-                                    text = docxText.ifEmpty { "This Word document is empty." },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                            }
-                        }
-                    }
-                    else -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp)
-                                .align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.InsertDriveFile,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = displayName,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Button(
-                                onClick = {
-                                    try {
-                                        val localFile = tempFile
-                                        val targetUri = if (localFile != null && localFile.exists()) {
-                                            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", localFile)
-                                        } else {
-                                            uri
-                                        }
-                                        val openIntent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(targetUri, "*/*")
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(Intent.createChooser(openIntent, "Open with"))
-                                    } catch (_: Exception) {
-                                        Toast.makeText(context, "Could not open externally", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            ) {
-                                Text("Open in External App")
-                            }
-                        }
-                    }
-                }
+                if (file != null) FileReader(file, displayName, fileType)
             }
         }
     }

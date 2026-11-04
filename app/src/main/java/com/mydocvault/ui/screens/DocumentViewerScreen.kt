@@ -1,6 +1,5 @@
 package com.mydocvault.ui.screens
 
-import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,11 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DriveFileMove
@@ -27,14 +22,12 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,7 +35,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,15 +48,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.mydocvault.ui.components.PdfViewer
-import com.mydocvault.ui.components.ZoomableImage
-import com.mydocvault.utils.DocxTextExtractor
+import com.mydocvault.ui.components.FileReader
 import com.mydocvault.utils.FileType
-import com.mydocvault.utils.openDocumentExternally
 import com.mydocvault.utils.shareDocument
 import com.mydocvault.viewmodel.DocumentViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,10 +63,7 @@ fun DocumentViewerScreen(
     val document by viewModel.document.collectAsState()
     val folders by viewModel.folders.collectAsState()
     val context = LocalContext.current
-
     var showSheet by remember { mutableStateOf(false) }
-    var docxText by remember { mutableStateOf("") }
-    var docxError by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState()
     val replaceLauncher = rememberLauncherForActivityResult(
@@ -91,21 +75,6 @@ fun DocumentViewerScreen(
             }
         }
     )
-
-    LaunchedEffect(document?.id) {
-        val doc = document ?: return@LaunchedEffect
-        if (FileType.fromRaw(doc.fileType) == FileType.DOCX && doc.name.endsWith(".docx", ignoreCase = true)) {
-            docxError = false
-            docxText = try {
-                withContext(Dispatchers.IO) {
-                    DocxTextExtractor.extractText(File(doc.filePath))
-                }
-            } catch (_: Exception) {
-                docxError = true
-                ""
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -144,50 +113,8 @@ fun DocumentViewerScreen(
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             val doc = document
             if (doc != null) {
-                when (FileType.fromRaw(doc.fileType)) {
-                    FileType.IMAGE -> ZoomableImage(path = doc.filePath)
-                    FileType.PDF -> PdfViewer(filePath = doc.filePath)
-                    FileType.DOCX -> {
-                        if (doc.name.endsWith(".docx", ignoreCase = true)) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(20.dp)
-                            ) {
-                                if (docxError) {
-                                    Text(
-                                        text = "Could not extract text from this document.",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.error,
-                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                    )
-                                } else {
-                                    Text(
-                                        text = docxText.ifBlank { "No preview available" },
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onBackground,
-                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                    )
-                                }
-                            }
-                        } else {
-                            ExternalFilePrompt(name = doc.name) {
-                                val opened = openDocumentExternally(context, doc.filePath, doc.name)
-                                if (!opened) {
-                                    android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }
-                    }
-                    else -> {
-                        ExternalFilePrompt(name = doc.name) {
-                            val opened = openDocumentExternally(context, doc.filePath, doc.name)
-                            if (!opened) {
-                                android.widget.Toast.makeText(context, "Could not open file", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
+                androidx.compose.runtime.key(doc.id, doc.updatedAt) {
+                    FileReader(File(doc.filePath), doc.name, FileType.fromRaw(doc.fileType))
                 }
             }
         }
@@ -302,53 +229,3 @@ private fun DocSheetItem(
         }
     }
 }
-
-@Composable
-private fun ExternalFilePrompt(
-    name: String,
-    onOpen: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(80.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FolderOpen,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Open with a compatible app to view this file",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            OutlinedButton(onClick = onOpen, modifier = Modifier.width(200.dp)) {
-                Text("Open externally")
-            }
-        }
-    }
-}
-

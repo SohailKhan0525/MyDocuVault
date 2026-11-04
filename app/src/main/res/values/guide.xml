@@ -1,0 +1,13 @@
+<resources>
+    <string name="guide_file_title">File it for later</string>
+    <string name="guide_file_body">Keep receipts and reports in folders you name. Your files start in private storage on this device.</string>
+    <string name="guide_read_title">Open to the page</string>
+    <string name="guide_read_body">Read a document, check a sheet or move through a slide deck without leaving the app. The office reader works offline.</string>
+    <string name="guide_lock_title">Choose your PIN</string>
+    <string name="guide_lock_body">Set four digits to unlock your vault. You can turn on fingerprint or face unlock later in Settings if your device supports it.</string>
+    <string name="guide_step">Vault guide · %1$d of %2$d</string>
+    <string name="guide_skip">Skip guide</string>
+    <string name="guide_next">Continue</string>
+    <string name="guide_back">Back</string>
+    <string name="guide_pin">Set up PIN</string>
+</resources>

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mydocvault.data.preferences.UserPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -32,17 +33,13 @@ class AuthViewModel @Inject constructor(
         false
     )
 
-    val onboardingCompleted: StateFlow<Boolean> = prefs.onboardingCompletedFlow.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        false
-    )
-
-    fun completeOnboarding() {
-        viewModelScope.launch {
-            prefs.setOnboardingCompleted(true)
-        }
+    suspend fun startMode(): String = when {
+        !prefs.pinFlow.first().isNullOrBlank() -> "unlock"
+        prefs.onboardingCompletedFlow.first() -> "create"
+        else -> "guide"
     }
+
+    suspend fun completeOnboarding() = prefs.setOnboardingCompleted(true)
 
     suspend fun setPin(pin: String) {
         prefs.setPin(pin)

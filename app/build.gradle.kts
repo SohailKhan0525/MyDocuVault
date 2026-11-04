@@ -44,11 +44,12 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 23
-        versionName = "1.9.4"
+        versionCode = 37
+        versionName = "1.14.0"
         vectorDrawables {
             useSupportLibrary = true
         }
+
     }
 
     signingConfigs {
@@ -105,6 +106,10 @@ android {
     }
 
     packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts += "lib/*/libc++_shared.so"
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
@@ -116,6 +121,12 @@ kapt {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    implementation("org.tukaani:xz:1.10")
+    implementation("org.jsoup:jsoup:1.18.3")
+    implementation(project(":libreofficekit"))
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
@@ -126,6 +137,9 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.2.1")
     implementation("androidx.compose.foundation:foundation")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.preference:preference:1.2.1")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.5")
@@ -145,6 +159,10 @@ dependencies {
 
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.noties.markwon:core:4.6.2")
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+    implementation("org.apache.commons:commons-compress:1.27.1")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

@@ -25,7 +25,7 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - 📂 **In-Folder Filtering** — quickly find specific items inside large folders
 
 ### Interoperability & Sharing
-- 📲 **Open with MyDocu** — open files directly from WhatsApp, Telegram, Gmail, and file managers with instant import into your chosen vault folder
+- 📲 **Open with MyDocu** — open files directly from WhatsApp, Telegram, Gmail, and file managers with in-app viewing and optional saving to a vault folder
 - 📤 **Preserved File Names on Sharing** — original document names are cleanly preserved when sharing files with other apps
 - 🗂️ **Configurable Storage Location** — choose where your documents are stored (Documents, Downloads, or Private App Storage) with automatic disk folder creation
 
@@ -43,12 +43,23 @@ MyDocuVault gives you a secure, private space on your Android device to store an
 - 🔄 **Replace** — swap a document's file while keeping its metadata
 - 🗑️ **Delete** — remove individual documents or entire folders
 
-### Document Viewing
-- 🖼️ **Image viewer** — pinch-to-zoom with Coil-powered rendering
-- 📄 **PDF viewer** — page-by-page navigation with full-width rendering, loading indicator, and graceful error handling using Android's built-in `PdfRenderer`
-- 📝 **DOCX preview** — plain-text extraction and display of Word documents
-- 📊 **Office support** — Excel and PowerPoint files are stored with their original extensions and opened through compatible apps on the device
-- 🧾 **Images to PDF** — select up to 100 images for one multi-page PDF, generated locally
+### Document viewing
+
+The vault and Android’s **Open with** action share the same offline readers.
+
+| File | In-app reader |
+|---|---|
+| Word, Excel, PowerPoint (including DOC, XLS and PPT), OpenDocument, RTF, CSV and TXT | LibreOfficeKit with document layout, zoom and native sheet or slide navigation |
+| PDF | AndroidPdfViewer with zoom, page scrolling and password entry |
+| Images | Coil with pinch and double-tap zoom; available decoders vary by Android version |
+| Audio and video | Media3 playback for supported containers and device codecs |
+| Markdown and source code | Markwon and bundled highlight.js, with a 512 KiB preview limit |
+| ZIP, JAR, APK, AAB, 7z and tar archives | Entry index with up to 1,000 names |
+| EPUB | Chapter navigation with formatted text and embedded raster images in unencrypted books |
+| TTF and OTF fonts | A type specimen rendered in the selected font |
+| SQLite databases | Read-only table and view definitions |
+
+Other formats can be stored and opened using a compatible installed app. No vault files are uploaded for rendering.
 
 ### Backup & Restore
 - 💾 **Manual backup** — tap *Back up now* in Settings to create a timestamped ZIP containing all documents and the Room database
@@ -113,7 +124,7 @@ app/src/main/java/com/mydocvault/
 ├── workers/        # BackupWorker (WorkManager)
 └── utils/          # File helpers, BackupManager, UpdateChecker,
                     #   UpdateNotificationHelper, BackupNotificationHelper,
-                    #   DocxTextExtractor, FileType enum
+                    #   FileType enum
 ```
 
 ### Navigation flow
@@ -128,7 +139,7 @@ Splash ──► PIN (create or unlock) ──► Home ──► Folder ──�
 ## Setup
 
 ### Prerequisites
-- Android Studio Hedgehog or later
+- Android Studio with support for Android Gradle Plugin 8.5
 - Android SDK with API 34 platform installed
 
 ### Clone and open
@@ -167,7 +178,11 @@ sdk.dir=/workspaces/MyDocuVault/android-sdk
 |---|---|
 | Debug | `app/build/outputs/apk/debug/app-debug.apk` |
 
-The GitHub Actions release workflow automatically builds and attaches the APK to each GitHub Release when changes are pushed to `main`.
+### Release versions
+
+For a release, set the SemVer `versionName` and a `versionCode` higher than all prior tagged builds in `app/build.gradle.kts`. Add user-facing notes in `releases/v<versionName>.md`. Use a patch for fixes, a minor for compatible features, and a major for breaking changes. A suffix such as `-rc.1` marks a prerelease.
+
+A push to `main` with a new version, or a matching `v<versionName>` tag, builds the signed universal APK and publishes it with a SHA-256 checksum. Existing releases are skipped. The updater selects the stable release APK by filename. LibreOffice runtimes for four Android ABIs are fetched and verified at build time, so the first build needs network access and the resulting universal APK is large.
 
 **Release signing setup:** the existing signing file `app/keystore/mydocvault.keystore` and the signing defaults used by previous releases are retained. The release workflow uses that same file and does not require you to create new GitHub Actions secrets. Do not regenerate, replace, delete, or move the keystore for routine updates. Keep a separate offline copy of the keystore somewhere safe.
 

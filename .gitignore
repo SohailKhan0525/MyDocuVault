@@ -11,3 +11,4 @@
 *.apk
 *.aab
 /android-sdk/
+/libreofficekit/build/
