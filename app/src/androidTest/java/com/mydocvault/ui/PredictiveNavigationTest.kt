@@ -3,8 +3,13 @@ package com.mydocvault.ui
 import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
-import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.BackEventCompat
+import androidx.compose.ui.geometry.Rect as ComposeRect
+import androidx.compose.ui.platform.ViewRootForTest
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
+import androidx.compose.ui.semantics.getOrNull
+import androidx.core.view.allViews
 import androidx.test.core.app.ActivityScenario
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
@@ -14,45 +19,53 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 class PredictiveNavigationTest {
-    private val automation get() = InstrumentationRegistry.getInstrumentation().uiAutomation
     private val first = "File it for later"
     private val second = "Open to the page"
 
-    // Use the platform clock and accessibility tree so Navigation runs on Android's main looper.
-    private fun bounds(label: String): Rect? {
-        fun find(node: AccessibilityNodeInfo): Rect? {
-            if (node.text?.toString() == label && node.isVisibleToUser) {
-                return Rect().also { node.getBoundsInScreen(it) }
+    // Sample Compose's current layout on the UI thread. Accessibility snapshots can retain
+    // an intermediate frame after a graphics-layer transition has finished.
+    private fun ActivityScenario<MainActivity>.layout(): Map<String, ComposeRect> {
+        var result = emptyMap<String, ComposeRect>()
+        onActivity { activity ->
+            result = buildMap {
+                activity.window.decorView.allViews.filterIsInstance<ViewRootForTest>().forEach { root ->
+                    root.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false).forEach { node ->
+                        node.config.getOrNull(SemanticsProperties.Text)?.forEach { value ->
+                            put(value.text, node.boundsInWindow)
+                        }
+                    }
+                }
             }
-            for (index in 0 until node.childCount) {
-                val child = node.getChild(index) ?: continue
-                find(child)?.let { return it }
-            }
-            return null
         }
-        return automation.rootInActiveWindow?.let(::find)
+        return result
     }
 
-    private fun await(description: String, condition: () -> Boolean) {
+    private fun ActivityScenario<MainActivity>.awaitLayout(
+        description: String, matches: (Map<String, ComposeRect>) -> Boolean
+    ): Map<String, ComposeRect> {
         val deadline = SystemClock.uptimeMillis() + 20_000
-        while (!condition()) {
-            assertTrue(description, SystemClock.uptimeMillis() < deadline)
-            SystemClock.sleep(40)
+        while (true) {
+            val frame = layout()
+            if (matches(frame)) return frame
+            assertTrue("$description. Last frame: $frame", SystemClock.uptimeMillis() < deadline)
+            SystemClock.sleep(35)
         }
     }
 
     private fun input(command: String) {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("input $command")).use {
             it.readBytes()
         }
     }
 
-    private fun openReadingPage() {
-        await("Guide is visible") { bounds(first) != null && bounds("Continue") != null }
-        val button = requireNotNull(bounds("Continue"))
-        input("tap ${button.centerX()} ${button.centerY()}")
-        await("Reading page is active") { bounds(second) != null && bounds(first) == null }
-        automation.waitForIdle(400, 10_000)
+    private fun ActivityScenario<MainActivity>.openReadingPage(): ComposeRect {
+        val button = awaitLayout("Guide is visible") { first in it && "Continue" in it }.getValue("Continue")
+        input("tap ${button.center.x.toInt()} ${button.center.y.toInt()}")
+        awaitLayout("Reading page is active") { second in it && first !in it }
+        // Wait for the native artwork and the forward transition to settle before measuring rest.
+        InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(450, 10_000)
+        return layout().getValue(second)
     }
 
     @Test @SdkSuppress(minSdkVersion = 34)
@@ -61,34 +74,34 @@ class PredictiveNavigationTest {
             val resources = InstrumentationRegistry.getInstrumentation().targetContext.resources
             val mode = resources.getIdentifier("config_navBarInteractionMode", "integer", "android")
             assumeTrue("Requires gesture navigation", mode != 0 && resources.getInteger(mode) == 2)
-            openReadingPage()
+            scenario.openReadingPage()
             val frame = Rect()
             scenario.onActivity { it.window.decorView.getWindowVisibleDisplayFrame(frame) }
-            input("swipe 1 ${frame.centerY()} ${frame.width() * 2 / 3} ${frame.centerY()} 450")
-            await("The system swipe commits back") { bounds(first) != null && bounds(second) == null }
+            input("touchscreen swipe 1 ${frame.centerY()} ${frame.width() * 2 / 3} ${frame.centerY()} 450")
+            scenario.awaitLayout("The system swipe commits back") { first in it && second !in it }
         }
     }
 
     @Test fun guideSeeksCancelsAndCommitsBack() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            openReadingPage()
-            val initial = requireNotNull(bounds(second))
-            fun seek(progress: Float) = BackEventCompat(1f, 200f, progress, BackEventCompat.EDGE_LEFT)
+            val initial = scenario.openReadingPage()
+            fun event(progress: Float) = BackEventCompat(1f, 200f, progress, BackEventCompat.EDGE_LEFT)
             fun startBack() {
-                scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackStarted(seek(0f)) }
-                scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackProgressed(seek(0.6f)) }
-                await("The current page moves while the gesture is held") {
-                    (bounds(second)?.left ?: initial.left) > initial.left + 2
+                scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackStarted(event(0f)) }
+                scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackProgressed(event(0.6f)) }
+                scenario.awaitLayout("The current page moves during the gesture from $initial") {
+                    first in it && (it[second]?.left ?: initial.left) > initial.left + 2f
                 }
             }
             startBack()
             scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackCancelled() }
-            await("Cancelling restores the original page position") {
-                bounds(second)?.left == initial.left && bounds(first) == null
+            scenario.awaitLayout("Cancelling restores $initial") {
+                val left = it[second]?.left
+                first !in it && left != null && kotlin.math.abs(left - initial.left) < 1.5f
             }
             startBack()
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-            await("Committing goes back one page") { bounds(first) != null && bounds(second) == null }
+            scenario.awaitLayout("Committing goes back one page") { first in it && second !in it }
         }
     }
 }
