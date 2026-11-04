@@ -5,12 +5,13 @@ runs:
   steps:
     - uses: actions/cache@v4
       with:
-        path: libreofficekit/build/downloads
+        path: .gradle/office-packages
         key: office-android-${{ hashFiles('libreofficekit/runtime-packages.tsv') }}
     - shell: bash
       run: |
         set -euo pipefail
-        dest=libreofficekit/build/downloads
+        dest="$GITHUB_WORKSPACE/.gradle/office-packages"
+        echo "OFFICE_PACKAGE_DIR=$dest" >> "$GITHUB_ENV"
         mkdir -p "$dest"
         fetch() {
           local apk="org.documentfoundation.libreoffice_$1.apk" digest="$2" base

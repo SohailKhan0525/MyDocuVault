@@ -29,6 +29,7 @@ val engines = file("runtime-packages.tsv").readLines().associate { line ->
     abi to (code.toInt() to sha256)
 }
 
+val cachedPackages = providers.environmentVariable("OFFICE_PACKAGE_DIR")
 val runtimeDirectory = layout.buildDirectory.dir("generated/office")
 val prepareOfficeRuntime = tasks.register<Sync>("prepareOfficeRuntime") {
     into(runtimeDirectory)
@@ -51,10 +52,12 @@ for ((abi, release) in engines) {
             destination.parentFile.mkdirs()
             val part = File.createTempFile("download-", ".part", destination.parentFile)
             try {
-                // F-Droid periodically moves older published versions to its archive.
-                val urls = listOf("repo", "archive").map { URI("https://f-droid.org/$it/$filename").toURL() }
-                val input = try { urls.first().openStream() } catch (_: FileNotFoundException) {
-                    urls.last().openStream()
+                val input = cachedPackages.orNull?.let { File(it, filename).inputStream() } ?: run {
+                    // F-Droid periodically moves older published versions to its archive.
+                    val urls = listOf("repo", "archive").map { URI("https://f-droid.org/$it/$filename").toURL() }
+                    try { urls.first().openStream() } catch (_: FileNotFoundException) {
+                        urls.last().openStream()
+                    }
                 }
                 input.use { source -> part.outputStream().use { source.copyTo(it) } }
                 check(checksum(part) == sha256) {
