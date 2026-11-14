@@ -94,7 +94,7 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - name: Measure optimized signed vault
+      - name: Measure signed vault APK
         run: |
           ./gradlew :app:assembleRelease --no-daemon
           apk=app/build/outputs/apk/release/app-release.apk
