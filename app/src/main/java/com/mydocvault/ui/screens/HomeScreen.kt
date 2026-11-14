@@ -206,13 +206,7 @@ fun HomeScreen(
             } else {
                 TopAppBar(
                     title = {
-                        Column {
-                            Text(
-                                text = "MyDocuVault",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-
-                        }
+                        Text("MyDocuVault", style = MaterialTheme.typography.titleMedium)
                     },
                     actions = {
                         IconButton(onClick = { isSearchActive = true }) {

@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.progressSemantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -112,7 +113,8 @@ private fun GuideProgress(page: GuidePage, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.guide_step, page.ordinal + 1, GuidePage.entries.size),
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(Modifier.fillMaxWidth().progressSemantics((page.ordinal + 1f) / GuidePage.entries.size),
+            horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             GuidePage.entries.forEach { step ->
                 Spacer(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(
                     if (step.ordinal <= page.ordinal) MaterialTheme.colorScheme.secondary

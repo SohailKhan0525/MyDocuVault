@@ -63,7 +63,7 @@ class PredictiveNavigationTest {
         val button = awaitLayout("Guide is visible") { first in it && "Continue" in it }.getValue("Continue")
         input("tap ${button.center.x.toInt()} ${button.center.y.toInt()}")
         awaitLayout("Reading page is active") { second in it && first !in it }
-        // Wait for the native artwork and the forward transition to settle before measuring rest.
+        // Wait for forward navigation to settle before measuring the resting position.
         InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(450, 10_000)
         return layout().getValue(second)
     }
