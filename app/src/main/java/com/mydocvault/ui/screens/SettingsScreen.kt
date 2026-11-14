@@ -89,6 +89,17 @@ fun SettingsScreen(
     var showUpdateDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
+    val updateRequest = remember { navController.currentBackStackEntry?.savedStateHandle }
+    val shouldCheck by remember(updateRequest) {
+        updateRequest?.getStateFlow("check_update", false) ?: kotlinx.coroutines.flow.MutableStateFlow(false)
+    }.collectAsState()
+    LaunchedEffect(shouldCheck) {
+        if (shouldCheck) {
+            updateRequest?.set("check_update", false)
+            viewModel.checkForUpdate(context, "SohailKhan0525", "MyDocuVault")
+        }
+    }
+
     // Restart the app automatically after a successful restore
     LaunchedEffect(restartApp) {
         if (restartApp) {

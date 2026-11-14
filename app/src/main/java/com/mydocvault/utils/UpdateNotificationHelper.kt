@@ -41,7 +41,7 @@ class UpdateNotificationHelper @Inject constructor(@ApplicationContext private v
         if (!canNotify() || !VersionComparator.isNewerVersion(tag, seen.getString("last", "0.0.0") ?: "0.0.0")) return
         val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         val open = PendingIntent.getActivity(context, 2001, Intent(context, MainActivity::class.java)
-            .setAction("com.mydocvault.OPEN_UPDATE").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP), flags)
+            .setAction("com.mydocvault.OPEN_UPDATE").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP), flags)
         val notes = PendingIntent.getActivity(context, 2002, Intent(Intent.ACTION_VIEW,
             Uri.parse("https://github.com/SohailKhan0525/MyDocuVault/releases/tag/${Uri.encode(tag)}")), flags)
         val detail = update.notes.lineSequence().map { it.trim().trimStart('#', '-', '*', ' ').replace("**", "") }
