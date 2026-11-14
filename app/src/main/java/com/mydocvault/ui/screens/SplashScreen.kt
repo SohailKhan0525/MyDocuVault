@@ -3,6 +3,7 @@ package com.mydocvault.ui.screens
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
+import com.mydocvault.ui.theme.vaultWash
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,8 +22,8 @@ fun SplashScreen(navController: NavController, viewModel: AuthViewModel = hiltVi
         }
     }
     Surface(color = MaterialTheme.colorScheme.background) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("MyDocuVault", style = MaterialTheme.typography.titleLarge)
+        Box(Modifier.fillMaxSize().vaultWash(), contentAlignment = Alignment.Center) {
+            Text("MyDocuVault", style = MaterialTheme.typography.headlineMedium)
         }
     }
 }

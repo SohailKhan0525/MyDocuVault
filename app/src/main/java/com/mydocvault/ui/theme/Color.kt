@@ -1,23 +1,19 @@
 package com.mydocvault.ui.theme
 
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 
-// Brand primaries
-val VaultBlue        = Color(0xFF1A56DB)   // vibrant blue
-val VaultBlueDark    = Color(0xFF4D8EFF)   // lighter blue for dark theme
-val VaultCyan        = Color(0xFF0891B2)
-val VaultIndigo      = Color(0xFF3730A3)   // secondary accent
-
-// Surfaces – light
-val VaultSand        = Color(0xFFF8F7FF)   // near-white with hint of blue
-val VaultSandCard    = Color(0xFFFFFFFF)
-
-// Surfaces – dark
-val VaultNight       = Color(0xFF0D0F1C)   // near-black with navy hue
-val VaultSurfaceDark = Color(0xFF161828)   // slightly lighter card surface
-val VaultSurfaceContainer = Color(0xFF1E2138)
-
-// Semantic
-val ErrorRed         = Color(0xFFE53935)
-val OnErrorLight     = Color.White
-val SuccessGreen     = Color(0xFF22C55E)
+/** A diffuse surface behind the vault index and setup screens, derived from the active theme. */
+@Composable
+internal fun Modifier.vaultWash(): Modifier {
+    val colors = MaterialTheme.colorScheme
+    return background(Brush.linearGradient(listOf(
+        colors.primaryContainer,
+        colors.background,
+        lerp(colors.surface, colors.tertiaryContainer, 0.45f)
+    )))
+}

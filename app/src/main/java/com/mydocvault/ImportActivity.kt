@@ -175,11 +175,12 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Open in MyDocuVault") }
+                title = { Text("Save to vault", style = MaterialTheme.typography.headlineSmall) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
         bottomBar = {
-            BottomAppBar {
+            BottomAppBar(containerColor = MaterialTheme.colorScheme.surface) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -203,8 +204,8 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
+                .padding(padding).wrapContentWidth(Alignment.CenterHorizontally)
+                .widthIn(max = 720.dp).fillMaxWidth().padding(horizontal = 16.dp)
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -215,7 +216,7 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                     onCreateFolder = { viewModel.createFolder(it) }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Files to Open & Save", style = MaterialTheme.typography.titleMedium)
+                Text("Files to save", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
             }
             
@@ -224,7 +225,8 @@ fun ImportScreen(viewModel: ImportViewModel, onFinish: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(

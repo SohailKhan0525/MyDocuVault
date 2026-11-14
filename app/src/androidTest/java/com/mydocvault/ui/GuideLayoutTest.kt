@@ -33,10 +33,10 @@ class GuideLayoutTest {
         )) {
             compose.runOnIdle { viewport.value = size }
             compose.onNodeWithText("Continue").assertIsDisplayed().assertHasClickAction()
-            val plate = compose.onNodeWithTag("guide-plate").getUnclippedBoundsInRoot()
+            val progress = compose.onNodeWithText("Vault guide · 1 of 3").getUnclippedBoundsInRoot()
             val title = compose.onNodeWithText("File it for later").getUnclippedBoundsInRoot()
-            assertTrue("Layout at $size: plate=$plate, title=$title",
-                if (wide) title.left >= plate.right else title.top >= plate.bottom)
+            assertTrue("Layout at $size: progress=$progress, title=$title",
+                if (wide) title.left >= progress.right else title.top >= progress.bottom)
         }
     }
 }

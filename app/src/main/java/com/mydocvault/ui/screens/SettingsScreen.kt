@@ -134,7 +134,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings", style = MaterialTheme.typography.titleLarge) },
+                title = { Text("Settings", style = MaterialTheme.typography.headlineSmall) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -144,7 +144,7 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
@@ -255,7 +255,7 @@ fun SettingsScreen(
             SettingsCard {
                 SettingsSectionHeader(
                     icon = Icons.Default.Folder,
-                    title = "Storage Location"
+                    title = "Storage"
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -307,7 +307,7 @@ fun SettingsScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                 Text(
-                    text = "New folders and imported files will be organized in this location. Your existing files remain completely safe and accessible.",
+                    text = "New files and folders will be saved here. Existing files stay in their current location.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -361,7 +361,7 @@ fun SettingsScreen(
             SettingsCard {
                 SettingsSectionHeader(
                     icon = Icons.Default.Backup,
-                    title = "Backup & Restore"
+                    title = "Backup and restore"
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -642,12 +642,12 @@ fun SettingsScreen(
 @Composable
 private fun SettingsCard(content: @Composable () -> Unit) {
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             content()
         }
     }
@@ -667,8 +667,8 @@ private fun SettingsSectionHeader(icon: ImageVector, title: String) {
         )
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
