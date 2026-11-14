@@ -1,5 +1,9 @@
 package com.mydocvault.ui
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.View
+import java.io.File
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -21,6 +25,10 @@ class VaultActionsTest {
                 MyDocVaultTheme(darkTheme = true) { HomeScreen(rememberNavController()) }
             }
         }
+        compose.waitForIdle()
+        compose.activityRule.scenario.onActivity { activity ->
+            capture(activity.window.decorView, File(activity.filesDir, "test-home-dark.png"))
+        }
         compose.onNodeWithText("New folder").performClick()
         compose.onNodeWithText("Create folder").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
@@ -28,5 +36,11 @@ class VaultActionsTest {
         compose.onNodeWithText("Import any file").assertIsDisplayed()
         compose.onNodeWithText("Import from gallery").assertIsDisplayed()
         compose.onNodeWithText("Images to PDF").assertIsDisplayed()
+    }
+    private fun capture(view: View, path: File) {
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(bitmap))
+        path.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
     }
 }

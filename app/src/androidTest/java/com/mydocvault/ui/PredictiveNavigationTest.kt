@@ -1,5 +1,8 @@
 package com.mydocvault.ui
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import java.io.File
 import android.graphics.Rect
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -75,6 +78,15 @@ class PredictiveNavigationTest {
             val mode = resources.getIdentifier("config_navBarInteractionMode", "integer", "android")
             assumeTrue("Requires gesture navigation", mode != 0 && resources.getInteger(mode) == 2)
             scenario.openReadingPage()
+            scenario.onActivity { activity ->
+                val view = activity.window.decorView
+                val image = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+                view.draw(Canvas(image))
+                File(activity.filesDir, "test-guide.png").outputStream().use {
+                    image.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+                image.recycle()
+            }
             val frame = Rect()
             scenario.onActivity { it.window.decorView.getWindowVisibleDisplayFrame(frame) }
             input("touchscreen swipe 1 ${frame.centerY()} ${frame.width() * 2 / 3} ${frame.centerY()} 450")

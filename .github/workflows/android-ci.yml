@@ -63,11 +63,16 @@ jobs:
             adb install -t apks/debug/app-debug.apk
             adb install -t apks/androidTest/debug/app-debug-androidTest.apk
             adb shell am instrument -w -r com.mydocvault.test/androidx.test.runner.AndroidJUnitRunner | tee device-results.txt
+            adb exec-out run-as com.mydocvault cat files/test-guide.png > test-guide.png
+            adb exec-out run-as com.mydocvault cat files/test-home-dark.png > test-home-dark.png
             grep -Eq '^OK \([1-9][0-9]* tests?\)' device-results.txt
       - name: Upload device results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-device-test-results
-          path: device-results.txt
+          path: |
+            device-results.txt
+            test-guide.png
+            test-home-dark.png
           if-no-files-found: ignore
