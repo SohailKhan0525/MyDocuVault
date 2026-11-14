@@ -22,15 +22,23 @@ object OfficeReaderPackage {
             @Suppress("DEPRECATION")
             val info = getPackageInfo(ID, 0)
             @Suppress("DEPRECATION")
-            info.versionCode >= REVISION && checkSignatures(context.packageName, ID) == PackageManager.SIGNATURE_MATCH
+            val trusted = info.versionCode >= REVISION && checkSignatures(context.packageName, ID) == PackageManager.SIGNATURE_MATCH
+            if (trusted) cachedInstaller(context)?.delete()
+            trusted
         } catch (_: PackageManager.NameNotFoundException) {
             false
         }
     }
 
+    private fun readerAbi(): String? = Build.SUPPORTED_ABIS.firstOrNull { it in setOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86") }
+
+    private fun cachedInstaller(context: Context): File? = readerAbi()?.let {
+        File(context.cacheDir, "MyDocuVault-Reader-$REVISION-$it.apk")
+    }
+
     // Check the signing identity and package before handing the APK to Android's installer.
     @Suppress("DEPRECATION")
-    private fun isExpectedPackage(context: Context, file: File): Boolean {
+    internal fun isExpectedPackage(context: Context, file: File): Boolean {
         val pm = context.packageManager
         val archive = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNATURES) ?: return false
         val ours = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures
@@ -39,12 +47,10 @@ object OfficeReaderPackage {
     }
 
     suspend fun download(context: Context, progress: (Int) -> Unit): File = withContext(Dispatchers.IO) {
-        val abi = Build.SUPPORTED_ABIS.firstOrNull { it in setOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86") }
-            ?: throw IOException("This processor is unsupported.")
-        val name = "MyDocuVault-Reader-$REVISION-$abi.apk"
-        val dest = File(context.cacheDir, name)
+        val dest = cachedInstaller(context) ?: throw IOException("This processor is unsupported.")
+        val name = dest.name
         if (dest.isFile && isExpectedPackage(context, dest)) return@withContext dest
-        val tmp = File.createTempFile("reader-", ".part", context.cacheDir)
+        val tmp = File.createTempFile("reader-", ".apk", context.cacheDir)
         val request = Request.Builder().url("https://github.com/SohailKhan0525/MyDocuVault/releases/download/v1.17.0/$name").build()
         try {
             client.newCall(request).execute().use { response ->

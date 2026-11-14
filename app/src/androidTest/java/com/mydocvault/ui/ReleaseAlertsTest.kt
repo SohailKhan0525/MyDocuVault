@@ -38,6 +38,10 @@ class ReleaseAlertsTest {
     @Test fun installedReaderHasTheVaultSignatureAndAcceptsAnOfficeFile() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         assertTrue(OfficeReaderPackage.isInstalled(context))
+        @Suppress("DEPRECATION")
+        val reader = context.packageManager.getApplicationInfo(OfficeReaderPackage.ID, 0)
+        assertTrue(OfficeReaderPackage.isExpectedPackage(context, java.io.File(reader.sourceDir)))
+        assertFalse(OfficeReaderPackage.isExpectedPackage(context, java.io.File(context.applicationInfo.sourceDir)))
         val file = java.io.File(context.cacheDir, "Grant test.txt")
         file.writeText("Device integration check")
         try {
