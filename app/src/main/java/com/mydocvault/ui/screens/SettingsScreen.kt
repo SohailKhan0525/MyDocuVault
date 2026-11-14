@@ -490,6 +490,9 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
+                com.mydocvault.ui.components.ReleaseAlertSetting(firstRun = false)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically

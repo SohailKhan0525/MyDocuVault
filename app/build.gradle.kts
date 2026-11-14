@@ -1,3 +1,4 @@
+import groovy.json.JsonSlurper
 import java.util.Properties
 import java.io.File
 import org.gradle.api.GradleException
@@ -35,6 +36,12 @@ fun resolveStoreFile(configuredPath: String, defaultRelativePath: String): File 
 val sharedKeystorePath = signingProp("KEYSTORE_FILE")
 val useSharedKeystore = sharedKeystorePath.isNotBlank()
 
+// The Android client configuration is public. The release sender identity belongs only in CI.
+val pushConfig = providers.environmentVariable("FIREBASE_ANDROID_CONFIG").orNull?.takeIf { it.isNotBlank() }
+    ?: file("google-services.json").takeIf { it.isFile }?.readText()
+fun Map<*, *>.getValueString(key: String): String = requireNotNull(this[key] as? String) { "Missing Firebase $key" }
+val firebase = pushConfig?.let { JsonSlurper().parseText(it) as Map<*, *> }
+
 android {
     namespace = "com.mydocvault"
     compileSdk = 34
@@ -44,8 +51,22 @@ android {
         minSdk = 26
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 41
-        versionName = "1.16.1"
+        versionCode = 42
+        versionName = "1.17.0"
+        firebase?.let { config ->
+            val project = config["project_info"] as Map<*, *>
+            val clients = config["client"] as List<*>
+            val client = clients.filterIsInstance<Map<*, *>>().first {
+                val info = it["client_info"] as Map<*, *>
+                (info["android_client_info"] as Map<*, *>)["package_name"] == applicationId
+            }
+            val info = client["client_info"] as Map<*, *>
+            val key = (client["api_key"] as List<*>).first() as Map<*, *>
+            resValue("string", "google_app_id", info.getValueString("mobilesdk_app_id"))
+            resValue("string", "google_api_key", key.getValueString("current_key"))
+            resValue("string", "project_id", project.getValueString("project_id"))
+            resValue("string", "gcm_defaultSenderId", project.getValueString("project_number"))
+        }
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -75,7 +96,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -128,7 +150,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.0")
     implementation("org.tukaani:xz:1.10")
     implementation("org.jsoup:jsoup:1.18.3")
-    implementation(project(":libreofficekit"))
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.3")
@@ -174,6 +195,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
+    implementation("com.google.firebase:firebase-messaging:24.0.3")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.hilt:hilt-work:1.2.0")
     kapt("androidx.hilt:hilt-compiler:1.2.0")

@@ -69,6 +69,10 @@ Other formats can be stored and opened using a compatible installed app. No vaul
 - 🔔 **Notifications** — silent notification confirms when auto-backup completes
 
 ### App Updates
+
+Use **Settings → Updates → Release notifications** to allow update alerts. Android schedules connected background checks roughly every six hours, including after reboots. Timing depends on power and network availability. Each newer version is announced once.
+
+For release-triggered Firebase Cloud Messaging, register the Android package `com.mydocvault` in Firebase, enable its Cloud Messaging API, and put the public Android client JSON in the GitHub repository variable `FIREBASE_ANDROID_CONFIG` before building. Store the sender service account JSON with FCM send permission in the Actions secret `FCM_SERVICE_ACCOUNT`. The release workflow sends a topic hint after a successful stable publication. Phones independently check GitHub before displaying an alert. Without the Firebase configuration, the background checks deliver the alerts.
 - 🔔 **Auto-check on launch** — queries GitHub Releases API when the app starts; shows a system notification if a newer version is available
 - 🔔 **Manual check** — tap *Check* in Settings → Updates to check on demand
 - ⬇️ **In-app download & install** — downloads the APK with a progress bar and launches the system installer
@@ -182,7 +186,7 @@ sdk.dir=/workspaces/MyDocuVault/android-sdk
 
 For a release, set the SemVer `versionName` and a `versionCode` higher than all prior tagged builds in `app/build.gradle.kts`. Add user-facing notes in `releases/v<versionName>.md`. Use a patch for fixes, a minor for compatible features, and a major for breaking changes. A suffix such as `-rc.1` marks a prerelease.
 
-A push to `main` with a new version, or a matching `v<versionName>` tag, builds the signed universal APK and publishes it with a SHA-256 checksum. Existing releases are skipped. The updater selects the stable release APK by filename. LibreOffice runtimes for four Android ABIs are fetched and verified at build time, so the first build needs network access and the resulting universal APK is large.
+A push to `main` with a new version, or a matching `v<versionName>` tag, builds the signed universal APK and publishes it with a SHA-256 checksum. Existing releases are skipped. The updater selects the stable release APK by filename. The main APK is limited to 50 MB (decimal). Four separately signed LibreOffice reader APKs are published by processor type. The vault downloads the matching reader on request, verifies its package name and signing certificate, and opens the Android installer. Once installed, Office reading works offline. Users upgrading from the bundled reader need this one-time installation.
 
 **Release signing setup:** the existing signing file `app/keystore/mydocvault.keystore` and the signing defaults used by previous releases are retained. The release workflow uses that same file and does not require you to create new GitHub Actions secrets. Do not regenerate, replace, delete, or move the keystore for routine updates. Keep a separate offline copy of the keystore somewhere safe.
 
