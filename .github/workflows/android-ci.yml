@@ -21,13 +21,18 @@ jobs:
           cache: gradle
       - uses: ./.github/actions/office-packages
       - name: Build APKs and run unit tests
-        run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --no-daemon
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :reader:assembleDebug :reader:assembleDebugAndroidTest --no-daemon
+      - name: Stage emulator APKs
+        run: |
+          mkdir device-apks
+          cp app/build/outputs/apk/debug/app-debug.apk device-apks/vault.apk
+          cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk device-apks/vault-test.apk
+          cp reader/build/outputs/apk/debug/*-x86_64-debug.apk device-apks/reader.apk
+          cp reader/build/outputs/apk/androidTest/debug/*androidTest.apk device-apks/reader-test.apk
       - uses: actions/upload-artifact@v4
         with:
           name: device-test-apks
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          path: device-apks/
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
@@ -60,14 +65,40 @@ jobs:
             adb shell wm dismiss-keyguard
             adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural
             adb shell settings put global enable_back_animation 1
-            adb install -t apks/debug/app-debug.apk
-            adb install -t apks/androidTest/debug/app-debug-androidTest.apk
+            adb install -t apks/vault.apk
+            adb install -t apks/vault-test.apk
+            adb install -t apks/reader.apk
+            adb install -t apks/reader-test.apk
+            adb shell pm grant com.mydocvault android.permission.POST_NOTIFICATIONS
             adb shell am instrument -w -r com.mydocvault.test/androidx.test.runner.AndroidJUnitRunner | tee device-results.txt
+            adb shell am instrument -w -r com.mydocvault.reader.test/androidx.test.runner.AndroidJUnitRunner | tee reader-results.txt
+            grep -Eq '^OK \(2 tests\)' reader-results.txt
             grep -Eq '^OK \([1-9][0-9]* tests?\)' device-results.txt
       - name: Upload device results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-device-test-results
-          path: device-results.txt
+          path: |
+            device-results.txt
+            reader-results.txt
           if-no-files-found: ignore
+
+  compact-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Measure signed vault APK
+        run: |
+          ./gradlew :app:assembleRelease --no-daemon
+          apk=app/build/outputs/apk/release/app-release.apk
+          bytes=$(stat -c %s "$apk")
+          echo "Main APK: $bytes bytes"
+          test "$bytes" -le 50000000
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify "$apk"

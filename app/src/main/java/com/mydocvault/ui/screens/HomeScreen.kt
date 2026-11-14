@@ -364,6 +364,7 @@ fun HomeScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)
                 ) {
                     item { VaultOverviewCard(folders.size, rootDocuments.size) }
+                    item { com.mydocvault.ui.components.ReleaseAlertSetting(firstRun = true) }
                     if (folders.isEmpty() && rootDocuments.isEmpty()) {
                         item {
                             EmptyState(

@@ -7,7 +7,7 @@ import androidx.core.content.FileProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.mydocvault.utils.getMimeTypeForFileName
+import android.webkit.MimeTypeMap
 import java.io.File
 import org.junit.Assert.*
 import org.junit.Test
@@ -25,7 +25,7 @@ class OfficeReaderTest {
             }
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
             val intent = Intent(context, LibreOfficeMainActivity::class.java)
-                .setDataAndType(uri, getMimeTypeForFileName(file.name))
+                .setDataAndType(uri, MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension))
                 .putExtra(Intent.EXTRA_TITLE, file.name)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
             lateinit var closed: LibreOfficeMainActivity
@@ -47,7 +47,7 @@ class OfficeReaderTest {
                 instrumentation.context.assets.open(name).use { input -> file.outputStream().use { input.copyTo(it) } }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(context, LibreOfficeMainActivity::class.java)
-                    .setDataAndType(uri, getMimeTypeForFileName(name))
+                    .setDataAndType(uri, MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension))
                     .putExtra(Intent.EXTRA_TITLE, name)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
                 ActivityScenario.launch<LibreOfficeMainActivity>(intent).use { scenario ->

@@ -2,6 +2,8 @@ package com.mydocvault
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.widget.Toast
 import android.view.WindowManager
 import androidx.activity.compose.setContent
@@ -12,6 +14,8 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
+    private var updateRequested by androidx.compose.runtime.mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -24,17 +28,21 @@ class MainActivity : FragmentActivity() {
 
         val openDocId = intent?.getLongExtra("open_document_id", -1L)?.takeIf { it > 0 }
 
+        updateRequested = intent?.action == "com.mydocvault.OPEN_UPDATE" && savedInstanceState == null
         setContent {
-            MyDocVaultApp(initialDocumentId = openDocId)
+            MyDocVaultApp(initialDocumentId = openDocId, openUpdate = updateRequested,
+                onUpdateOpened = { updateRequested = false })
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        updateRequested = intent.action == "com.mydocvault.OPEN_UPDATE"
         val openDocId = intent.getLongExtra("open_document_id", -1L).takeIf { it > 0 }
         setContent {
-            MyDocVaultApp(initialDocumentId = openDocId)
+            MyDocVaultApp(initialDocumentId = openDocId, openUpdate = updateRequested,
+                onUpdateOpened = { updateRequested = false })
         }
     }
 }

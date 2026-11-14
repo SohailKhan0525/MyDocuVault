@@ -22,7 +22,7 @@ data class UpdateInfo(
 class UpdateChecker @Inject constructor(
     private val client: OkHttpClient
 ) {
-    suspend fun checkForUpdate(context: Context, owner: String, repo: String): UpdateInfo? = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(context: Context, owner: String, repo: String, retryNetworkErrors: Boolean = false): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
             val currentVersion = getAppVersionName(context)
             val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
@@ -32,6 +32,7 @@ class UpdateChecker @Inject constructor(
                 .header("Accept", "application/vnd.github.v3+json")
                 .build()
             client.newCall(request).execute().use { response ->
+                if (retryNetworkErrors && (response.code >= 500 || response.code in setOf(403, 429))) throw java.io.IOException("GitHub unavailable")
                 if (!response.isSuccessful) return@withContext null
                 val body = response.body?.string() ?: return@withContext null
                 val json = JSONObject(body)
@@ -54,7 +55,11 @@ class UpdateChecker @Inject constructor(
                 if (!VersionComparator.isNewerVersion(tagName, currentVersion)) return@withContext null
                 UpdateInfo(tagName, notes, apkUrl)
             }
-        } catch (_: Exception) {
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: java.io.IOException) {
+            if (retryNetworkErrors) throw e else null
+        } catch (_: org.json.JSONException) {
             null
         }
     }

@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <permission android:name="com.mydocvault.permission.OPEN_READER" android:protectionLevel="signature" />
+    <application android:label="MyDocuVault Office reader" android:theme="@style/LibreOfficeTheme"
+        android:allowBackup="false" android:enableOnBackInvokedCallback="true">
+        <activity android:name="org.libreoffice.LibreOfficeMainActivity" android:exported="true"
+            android:permission="com.mydocvault.permission.OPEN_READER" tools:replace="android:exported" />
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.fileprovider"
+            android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/reader_paths" />
+        </provider>
+    </application>
+</manifest>

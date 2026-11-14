@@ -31,7 +31,7 @@ fun FileReader(file: File, name: String, storedType: FileType) {
     when {
         !file.isFile -> ReaderMessage("This file is no longer available.")
         type in setOf(FileType.DOCX, FileType.OFFICE, FileType.SPREADSHEET, FileType.PRESENTATION) ||
-            ext == "txt" -> {
+            ext == "txt" -> WithOfficeReader(openElsewhere) {
             var launched by rememberSaveable(file.path) { mutableStateOf(false) }
             var failed by rememberSaveable(file.path) { mutableStateOf(false) }
             val read = { failed = !openOfficeInLibreOffice(context, file.path, name) }

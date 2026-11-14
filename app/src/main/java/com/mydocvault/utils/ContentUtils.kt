@@ -85,7 +85,9 @@ fun openOfficeInLibreOffice(context: Context, filePath: String, displayName: Str
             "${context.packageName}.fileprovider",
             file
         )
-        val intent = Intent(context, org.libreoffice.LibreOfficeMainActivity::class.java).apply {
+        if (!OfficeReaderPackage.isInstalled(context)) return false
+        val intent = Intent().setClassName(OfficeReaderPackage.ID, "org.libreoffice.LibreOfficeMainActivity").apply {
+            if (context !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             action = Intent.ACTION_VIEW
             setDataAndType(uri, getMimeTypeForFileName(displayName))
             putExtra(Intent.EXTRA_TITLE, displayName)
