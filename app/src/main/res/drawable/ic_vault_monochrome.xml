@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:scaleX="0.0516" android:scaleY="0.0516"
+        android:translateX="21.65" android:translateY="21.65">
+        <!-- Paper edges, two lines, and the lock stay legible after the launcher applies its tint. -->
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M281,477 L249,327 Q232,253 315,226 L649,134 Q716,112 738,186 L746,207 H461 Q371,207 371,304 V477 Z" />
+        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+            android:pathData="M389,480 V301 Q389,224 464,224 H798 Q810,224 815,231 L815,332 Q815,396 877,396 H978 V565 H594 Q558,565 537,537 L515,509 Q487,476 448,476 Z M504,344 H752 A24,24 0,0 1,752 392 H504 A24,24 0,0 1,504 344 Z M504,441 H859 A24,24 0,0 1,859 489 H504 A24,24 0,0 1,504 441 Z" />
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M834,244 L959,374 H882 Q834,374 834,326 Z" />
+        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+            android:pathData="M154,601 Q154,488 250,488 H425 Q480,488 508,527 L534,556 Q557,583 594,583 H1003 Q1103,583 1100,684 L1082,1027 Q1078,1123 986,1123 H261 Q166,1123 163,1031 Z M486,786 V759 A136,136 0,0 1,758 759 V786 Q819,792 819,856 V985 Q819,1057 748,1057 H496 Q425,1057 425,985 V856 Q425,792 486,786 Z M546,784 H698 V759 A76,76 0,0 0,546 759 Z M600,933 A43,43 0,1 1,651 933 L653,972 Q654,986 640,986 H610 Q597,986 598,972 Z" />
+    </group>
+</vector>
