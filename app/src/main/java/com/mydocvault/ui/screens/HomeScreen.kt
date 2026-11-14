@@ -4,15 +4,9 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -38,7 +31,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Folder
@@ -48,14 +40,18 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Slideshow
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.mydocvault.ui.components.VaultFileRow
+import com.mydocvault.ui.theme.vaultWash
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,12 +66,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -83,7 +79,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -205,7 +200,7 @@ fun HomeScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.background
                     )
                 )
             } else {
@@ -214,7 +209,7 @@ fun HomeScreen(
                         Column {
                             Text(
                                 text = "MyDocuVault",
-                                style = MaterialTheme.typography.titleLarge
+                                style = MaterialTheme.typography.titleMedium
                             )
 
                         }
@@ -236,36 +231,34 @@ fun HomeScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.background
                     )
                 )
             }
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showSheet = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Add")
+        bottomBar = {
+            if (!isSearchActive) {
+                Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)
+                    .navigationBarsPadding().wrapContentWidth(Alignment.CenterHorizontally)
+                    .widthIn(max = 840.dp).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = { renameFolderTarget = 0L },
+                        modifier = Modifier.weight(1f).heightIn(min = 50.dp)) {
+                        Text("New folder")
+                    }
+                    Button(onClick = { showSheet = true },
+                        modifier = Modifier.weight(1f).heightIn(min = 50.dp)) {
+                        Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Add files")
+                    }
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)
             .wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 840.dp).fillMaxWidth()) {
-            AnimatedVisibility(
-                visible = !isSearchActive,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 5 }),
-                exit = fadeOut()
-            ) {
-                VaultOverviewCard(
-                    folderCount = folders.size,
-                    documentCount = rootDocuments.size
-                )
-            }
-
             if (isSearchActive) {
                 // Filter chips
                 LazyRow(
@@ -294,8 +287,7 @@ fun HomeScreen(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(
                             title = "Search your vault",
-                            subtitle = "Type document name, notes, or extension",
-                            icon = Icons.Default.Search
+                            subtitle = "Type document name, notes, or extension"
                         )
                     }
                 } else {
@@ -308,14 +300,13 @@ fun HomeScreen(
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             EmptyState(
                                 title = "No matches found",
-                                subtitle = "Try a different search keyword or filter",
-                                icon = Icons.Default.Search
+                                subtitle = "Try a different search keyword or filter"
                             )
                         }
                     } else {
                         LazyColumn(
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(0.dp)
                         ) {
                             if (showFolders && searchedFolders.isNotEmpty()) {
                                 item {
@@ -323,7 +314,7 @@ fun HomeScreen(
                                         text = "Matching Folders (${searchedFolders.size})",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                                        modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
                                     )
                                 }
                                 items(searchedFolders, key = { "f_${it.id}" }) { folder ->
@@ -341,7 +332,7 @@ fun HomeScreen(
                                         text = "Matching Documents (${searchedDocuments.size})",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = if (showFolders && searchedFolders.isNotEmpty()) 12.dp else 0.dp, start = 4.dp, bottom = 4.dp)
+                                        modifier = Modifier.padding(top = if (showFolders && searchedFolders.isNotEmpty()) 12.dp else 0.dp, start = 8.dp, bottom = 8.dp)
                                     )
                                 }
                                 items(searchedDocuments, key = { "d_${it.id}" }) { doc ->
@@ -360,7 +351,7 @@ fun HomeScreen(
                                         FileType.PRESENTATION -> MaterialTheme.colorScheme.tertiary
                                         else -> MaterialTheme.colorScheme.tertiary
                                     }
-                                    ItemDocCard(
+                                    VaultFileRow(
                                         name = doc.name,
                                         subtitle = doc.fileType.uppercase() + if (!doc.notes.isNullOrBlank()) " • ${doc.notes}" else "",
                                         icon = docIcon,
@@ -375,120 +366,117 @@ fun HomeScreen(
                     }
                 }
             } else {
-                // Regular view
-                if (folders.isEmpty() && rootDocuments.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        EmptyState(
-                            title = "Add your first file",
-                            subtitle = "Use the Add button to import a document or make a folder.",
-                            icon = Icons.Default.Folder
-                        )
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                ) {
+                    item { VaultOverviewCard(folders.size, rootDocuments.size) }
+                    if (folders.isEmpty() && rootDocuments.isEmpty()) {
+                        item {
+                            EmptyState(
+                                title = "Add your first file",
+                                subtitle = "Tap Add files to import a document or photos."
+                            )
+                        }
                     }
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        if (folders.isNotEmpty()) {
-                            item {
-                                Text(
-                                    text = "Folders (${folders.size})",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-                                )
-                            }
-                            items(folders, key = { it.id }) { folder ->
-                                val dismissState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = {
-                                        deleteFolderTarget = folder.id
-                                        false
-                                    }
-                                )
-                                SwipeToDismissBox(
-                                    state = dismissState,
-                                    backgroundContent = {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(horizontal = 16.dp),
-                                            contentAlignment = Alignment.CenterEnd
-                                        ) {
-                                            Text(
-                                                text = "Delete",
-                                                color = MaterialTheme.colorScheme.error,
-                                                style = MaterialTheme.typography.labelLarge
-                                            )
-                                        }
-                                    }
-                                ) {
-                                    FolderCard(
-                                        name = folder.name,
-                                        onClick = { navController.navigate("${NavRoutes.Folder}/${folder.id}") },
-                                        onLongClick = { renameFolderTarget = folder.id }
-                                    )
+                    if (folders.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Folders (${folders.size})",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+                            )
+                        }
+                        items(folders, key = { "folder_${it.id}" }) { folder ->
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = {
+                                    deleteFolderTarget = folder.id
+                                    false
                                 }
+                            )
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                backgroundContent = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 16.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Text(
+                                            text = "Delete",
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
+                                }
+                            ) {
+                                FolderCard(
+                                    name = folder.name,
+                                    onClick = { navController.navigate("${NavRoutes.Folder}/${folder.id}") },
+                                    onLongClick = { renameFolderTarget = folder.id }
+                                )
                             }
                         }
+                    }
 
-                        if (rootDocuments.isNotEmpty()) {
-                            item {
-                                Text(
-                                    text = "Documents (${rootDocuments.size})",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = if (folders.isNotEmpty()) 12.dp else 0.dp, start = 4.dp, bottom = 4.dp)
-                                )
-                            }
-                            items(rootDocuments, key = { it.id }) { doc ->
-                                val dismissState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = {
-                                        deleteDocTarget = doc.id
-                                        false
-                                    }
-                                )
-                                SwipeToDismissBox(
-                                    state = dismissState,
-                                    backgroundContent = {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(horizontal = 16.dp),
-                                            contentAlignment = Alignment.CenterEnd
-                                        ) {
-                                            Text(
-                                                "Delete",
-                                                color = MaterialTheme.colorScheme.error,
-                                                style = MaterialTheme.typography.labelLarge
-                                            )
-                                        }
-                                    }
-                                ) {
-                                    val fileType = FileType.fromRaw(doc.fileType)
-                                    val docIcon = when (fileType) {
-                                        FileType.IMAGE -> Icons.Default.Image
-                                        FileType.PDF -> Icons.Default.Description
-                                        FileType.SPREADSHEET -> Icons.Default.TableChart
-                                        FileType.PRESENTATION -> Icons.Default.Slideshow
-                                        else -> Icons.Default.FileOpen
-                                    }
-                                    val docIconColor = when (fileType) {
-                                        FileType.IMAGE -> MaterialTheme.colorScheme.secondary
-                                        FileType.PDF -> MaterialTheme.colorScheme.error
-                                        FileType.SPREADSHEET -> MaterialTheme.colorScheme.secondary
-                                        FileType.PRESENTATION -> MaterialTheme.colorScheme.tertiary
-                                        else -> MaterialTheme.colorScheme.tertiary
-                                    }
-                                    ItemDocCard(
-                                        name = doc.name,
-                                        subtitle = doc.fileType.uppercase(),
-                                        icon = docIcon,
-                                        iconContainerColor = docIconColor.copy(alpha = 0.12f),
-                                        iconTint = docIconColor,
-                                        onClick = { navController.navigate("${NavRoutes.Document}/${doc.id}") },
-                                        onLongClick = { renameDocTarget = doc.id }
-                                    )
+                    if (rootDocuments.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Documents (${rootDocuments.size})",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = if (folders.isNotEmpty()) 12.dp else 0.dp, start = 8.dp, bottom = 8.dp)
+                            )
+                        }
+                        items(rootDocuments, key = { "document_${it.id}" }) { doc ->
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = {
+                                    deleteDocTarget = doc.id
+                                    false
                                 }
+                            )
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                backgroundContent = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 16.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Text(
+                                            "Delete",
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
+                                }
+                            ) {
+                                val fileType = FileType.fromRaw(doc.fileType)
+                                val docIcon = when (fileType) {
+                                    FileType.IMAGE -> Icons.Default.Image
+                                    FileType.PDF -> Icons.Default.Description
+                                    FileType.SPREADSHEET -> Icons.Default.TableChart
+                                    FileType.PRESENTATION -> Icons.Default.Slideshow
+                                    else -> Icons.Default.FileOpen
+                                }
+                                val docIconColor = when (fileType) {
+                                    FileType.IMAGE -> MaterialTheme.colorScheme.secondary
+                                    FileType.PDF -> MaterialTheme.colorScheme.error
+                                    FileType.SPREADSHEET -> MaterialTheme.colorScheme.secondary
+                                    FileType.PRESENTATION -> MaterialTheme.colorScheme.tertiary
+                                    else -> MaterialTheme.colorScheme.tertiary
+                                }
+                                VaultFileRow(
+                                    name = doc.name,
+                                    subtitle = doc.fileType.uppercase(),
+                                    icon = docIcon,
+                                    iconContainerColor = docIconColor.copy(alpha = 0.12f),
+                                    iconTint = docIconColor,
+                                    onClick = { navController.navigate("${NavRoutes.Document}/${doc.id}") },
+                                    onLongClick = { renameDocTarget = doc.id }
+                                )
                             }
                         }
                     }
@@ -506,21 +494,11 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
-                    text = "Add content",
+                    text = "Add files",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                BottomSheetItem(
-                    icon = Icons.Default.CreateNewFolder,
-                    title = "New folder",
-                    subtitle = "Create an empty vault folder",
-                    onClick = {
-                        showSheet = false
-                        renameFolderTarget = 0L
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 BottomSheetItem(
                     icon = Icons.Default.Image,
                     title = "Import from gallery",
@@ -662,116 +640,10 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FolderCard(
-    name: String,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(44.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector = Icons.Default.Folder,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-            Text(
-                text = name,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ItemDocCard(
-    name: String,
-    subtitle: String,
-    icon: ImageVector,
-    iconContainerColor: Color,
-    iconTint: Color,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = iconContainerColor,
-                modifier = Modifier.size(44.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (subtitle.isNotEmpty()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-    }
+private fun FolderCard(name: String, onClick: () -> Unit, onLongClick: () -> Unit) {
+    VaultFileRow(name, null, Icons.Default.Folder, MaterialTheme.colorScheme.primaryContainer,
+        MaterialTheme.colorScheme.onPrimaryContainer, onClick, onLongClick)
 }
 
 @Composable
@@ -816,22 +688,25 @@ private fun BottomSheetItem(
 
 @Composable
 private fun VaultOverviewCard(folderCount: Int, documentCount: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        androidx.compose.foundation.Image(
-            androidx.compose.ui.res.painterResource(com.mydocvault.R.drawable.plate_filing),
-            contentDescription = null,
-            modifier = Modifier.width(96.dp).height(60.dp)
-        )
-        Column {
-            Text("Filing cabinet", style = MaterialTheme.typography.headlineSmall.copy(
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif))
-            Text("$folderCount ${if (folderCount == 1) "folder" else "folders"} · $documentCount loose ${if (documentCount == 1) "file" else "files"}",
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Surface(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        shape = RoundedCornerShape(26.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+        Column(Modifier.fillMaxWidth().vaultWash().padding(22.dp)) {
+            Text("Your vault", style = MaterialTheme.typography.displaySmall,
+                modifier = Modifier.semantics { heading() })
+            Spacer(Modifier.height(22.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                VaultCount(folderCount, if (folderCount == 1) "Folder" else "Folders", Modifier.weight(1f))
+                VaultCount(documentCount, if (documentCount == 1) "Loose file" else "Loose files", Modifier.weight(1f))
+            }
         }
     }
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+}
+
+@Composable
+private fun VaultCount(count: Int, label: String, modifier: Modifier) {
+    Column(modifier.semantics(mergeDescendants = true) {}) {
+        Text(count.toString(), style = MaterialTheme.typography.headlineMedium)
+        Text(label, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

@@ -9,10 +9,10 @@ import androidx.compose.ui.unit.sp
 val VaultTypography = Typography(
     displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 36.sp,
+        fontWeight = FontWeight.Medium,
+        fontSize = 38.sp,
         lineHeight = 44.sp,
-        letterSpacing = (-0.5).sp
+        letterSpacing = (-1.3).sp
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -53,7 +53,7 @@ val VaultTypography = Typography(
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 0.1.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -81,13 +81,13 @@ val VaultTypography = Typography(
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 0.1.sp
     ),
     labelSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 0.1.sp
     )
 )

@@ -7,6 +7,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.safeDrawingPadding
+import com.mydocvault.ui.theme.vaultWash
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -27,7 +29,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -38,14 +39,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -110,13 +111,13 @@ fun PinScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .vaultWash().safeDrawingPadding(),
         contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
                 .widthIn(max = 420.dp).fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -125,26 +126,12 @@ fun PinScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(top = 20.dp)
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    tonalElevation = 4.dp,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
+                Text("MyDocuVault", style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.secondary)
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = header,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -175,9 +162,8 @@ fun PinScreen(
 
             // Keypad section
             Surface(
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                shape = RoundedCornerShape(28.dp),
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 4.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -190,7 +176,7 @@ fun PinScreen(
                         columns = GridCells.Fixed(3),
                         userScrollEnabled = false,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth().height(216.dp)
                     ) {
                         val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back")
@@ -212,7 +198,7 @@ fun PinScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.Backspace,
-                                            contentDescription = "Backspace",
+                                            contentDescription = "Delete last digit",
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -228,7 +214,7 @@ fun PinScreen(
                                         modifier = Modifier
                                             .height(48.dp)
                                             .fillMaxWidth(),
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = CircleShape,
                                         colors = ButtonDefaults.filledTonalButtonColors(
                                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                                         )
@@ -291,7 +277,7 @@ fun PinScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
@@ -326,7 +312,7 @@ fun PinScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = CircleShape
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Fingerprint,
@@ -348,7 +334,7 @@ fun PinScreen(
 
 @Composable
 private fun PinDots(count: Int, filled: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(count) { index ->
             val isFilled = index < filled
             val dotSize by animateDpAsState(
@@ -362,10 +348,11 @@ private fun PinDots(count: Int, filled: Int) {
                 label = "dot_color_$index"
             )
             Box(
-                modifier = Modifier
-                    .size(dotSize)
-                    .background(color = dotColor, shape = CircleShape)
-            )
+                modifier = Modifier.size(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(Modifier.size(dotSize).background(color = dotColor, shape = CircleShape))
+            }
         }
     }
 }
