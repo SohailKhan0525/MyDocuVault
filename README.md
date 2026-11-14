@@ -72,7 +72,6 @@ Other formats can be stored and opened using a compatible installed app. No vaul
 
 Use **Settings → Updates → Release notifications** to allow update alerts. Android schedules connected background checks roughly every six hours, including after reboots. Timing depends on power and network availability. Each newer version is announced once.
 
-For release-triggered Firebase Cloud Messaging, register the Android package `com.mydocvault` in Firebase, enable its Cloud Messaging API, and put the public Android client JSON in the GitHub repository variable `FIREBASE_ANDROID_CONFIG` before building. Store the sender service account JSON with FCM send permission in the Actions secret `FCM_SERVICE_ACCOUNT`. The release workflow sends a topic hint after a successful stable publication. Phones independently check GitHub before displaying an alert. Without the Firebase configuration, the background checks deliver the alerts.
 - 🔔 **Auto-check on launch** — queries GitHub Releases API when the app starts; shows a system notification if a newer version is available
 - 🔔 **Manual check** — tap *Check* in Settings → Updates to check on demand
 - ⬇️ **In-app download & install** — downloads the APK with a progress bar and launches the system installer

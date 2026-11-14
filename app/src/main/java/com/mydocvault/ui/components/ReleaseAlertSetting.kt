@@ -19,7 +19,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mydocvault.utils.UpdateNotificationHelper
-import com.mydocvault.workers.ReleasePushService
 import com.mydocvault.workers.UpdateWorker
 
 @Composable
@@ -32,11 +31,9 @@ internal fun ReleaseAlertSetting(firstRun: Boolean) {
     var active by remember { mutableStateOf(enabled()) }
     var dismissed by remember { mutableStateOf(prefs.getBoolean("dismissed", false)) }
     fun refresh() {
-        active = enabled()
-        if (active) {
-            ReleasePushService.subscribe(context)
-            UpdateWorker.checkNow(context)
-        }
+        val nowEnabled = enabled()
+        if (nowEnabled && !active) UpdateWorker.checkNow(context)
+        active = nowEnabled
     }
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
@@ -48,7 +45,7 @@ internal fun ReleaseAlertSetting(firstRun: Boolean) {
     if (firstRun && (active || dismissed)) return
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(if (firstRun) "Hear about new releases" else "Release notifications", style = MaterialTheme.typography.titleMedium)
-        Text(if (active) "On · One alert per new version." else "Get a short note when there’s a new version, even with the vault closed.",
+        Text(if (active) "On · One alert per new version." else "Your phone checks for updates in the background and tells you what’s new.",
             style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = {

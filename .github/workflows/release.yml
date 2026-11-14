@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       KEYSTORE_FILE: app/keystore/mydocvault.keystore
-      FIREBASE_ANDROID_CONFIG: ${{ vars.FIREBASE_ANDROID_CONFIG }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -68,17 +67,3 @@ jobs:
           if [[ "$PRERELEASE" == true ]]; then flags+=(--prerelease); fi
           gh release create "$TAG" "${assets[@]}" --target "$GITHUB_SHA" \
             --title "MyDocuVault $TAG" --notes-file "releases/$TAG.md" "${flags[@]}"
-
-      - name: Notify opted-in phones
-        if: steps.version.outputs.publish == 'true' && steps.version.outputs.prerelease != 'true' && env.FIREBASE_ANDROID_CONFIG != ''
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
-          FCM_CREDENTIALS: ${{ secrets.FCM_SERVICE_ACCOUNT }}
-        run: |
-          set -euo pipefail
-          if [[ -z "$FCM_CREDENTIALS" ]]; then
-            echo "::warning::FCM_SERVICE_ACCOUNT is missing. Background release checks still work."
-            exit 0
-          fi
-          python -m pip install --quiet 'google-auth[requests]>=2.25,<3'
-          python .github/scripts/notify_release.py

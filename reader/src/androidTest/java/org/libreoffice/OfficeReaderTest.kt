@@ -47,7 +47,7 @@ class OfficeReaderTest {
                 instrumentation.context.assets.open(name).use { input -> file.outputStream().use { input.copyTo(it) } }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(context, LibreOfficeMainActivity::class.java)
-                    .setDataAndType(uri, getMimeTypeForFileName(name))
+                    .setDataAndType(uri, MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension))
                     .putExtra(Intent.EXTRA_TITLE, name)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
                 ActivityScenario.launch<LibreOfficeMainActivity>(intent).use { scenario ->

@@ -21,7 +21,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.compressors.CompressorStreamFactory
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
+import java.util.zip.GZIPInputStream
+import org.tukaani.xz.XZInputStream
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -76,10 +78,11 @@ private fun listArchiveEntries(file: File): List<String> = runCatching {
             file.name.endsWith(".tbz2", ignoreCase = true) ||
             file.name.endsWith(".tar.xz", ignoreCase = true) -> {
             file.inputStream().buffered().use { source ->
-                val archiveSource = if (file.name.endsWith(".tar", ignoreCase = true)) {
-                    source
-                } else {
-                    CompressorStreamFactory().createCompressorInputStream(source)
+                val archiveSource = when (file.extension.lowercase()) {
+                    "tgz", "gz" -> GZIPInputStream(source)
+                    "tbz2", "bz2" -> BZip2CompressorInputStream(source)
+                    "xz" -> XZInputStream(source)
+                    else -> source
                 }
                 TarArchiveInputStream(archiveSource).use { archive ->
                     buildList<String> {

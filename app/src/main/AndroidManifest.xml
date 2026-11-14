@@ -26,12 +26,6 @@
         android:supportsRtl="true"
         android:requestLegacyExternalStorage="true">
 
-        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
-        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
-        <service android:name=".workers.ReleasePushService" android:exported="false">
-            <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
-        </service>
-
         <!-- Disable default WorkManager startup so Hilt's WorkerFactory can be used -->
         <provider
             android:name="androidx.startup.InitializationProvider"
